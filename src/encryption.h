@@ -2,8 +2,8 @@
 #define ENCRYPTH
 
 #define MAGIC "heaserrwertdafa"
-#define MINBUFSIZE 100
-#define MAXBUFSIZE 250
+#define MINBUFSIZE 1
+#define MAXBUFSIZE 5
 
 /* Encrpyts a message.
  * Parameters: the message to decrypt, must be \0 terminated

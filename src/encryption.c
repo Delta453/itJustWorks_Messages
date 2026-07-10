@@ -13,12 +13,12 @@
 #include"error.h"
 #include"encryption.h"
 
-int sigfaultTrue = 0; //used in the decrypt function to check failure
+int segfaultTrue = 0; //used in the decrypt function to check failure
 int seedSet = 0; //if 1 then a seed has been set
 
-static void sigHandler() { 
+static void sigfaultHandler() { 
 	printf("Encryption crashed\n");
-	sigfaultTrue = 1;
+	segfaultTrue = 1;
 }
 
 //Returns a random number based on the current time
@@ -33,16 +33,16 @@ static int genRand(int lowBrace, int highBrace) {
 		srand(randSeed.tv_nsec);
 	}
 
-	do{
-		curr = rand();
-	} while((curr < lowBrace) || (curr > highBrace));
+	//to avoid a 10 seconds delay on finding the randoms
+	curr = rand();
+	curr = (curr % highBrace) + lowBrace;
 
 	return curr;
 }
 
 char *encrypt(char *buf) { 
 	char* message;
-	int messageSize, encryptedSize, currPos, magicSize;
+	int messageSize, encryptedSize, currPos;
 	int startBufferSize, endBufferSize;
 
 	messageSize = strlen(buf);
@@ -53,17 +53,18 @@ char *encrypt(char *buf) {
 	message = malloc(encryptedSize);
 	if(message == NULL) { 
 		callError(ER_MALLOC);
-		return -1;
+		return NULL;
 	}
 
 	currPos = startBufferSize;
-	strncpy(&message[currPos], MAGIC, strlen(MAGIC));
-	currPos =+ strlen(MAGIC);
+	// memcpy to avoid error, source: stackoverflow, user: dbush
+	memcpy(&message[currPos], MAGIC, strlen(MAGIC));
+	currPos += strlen(MAGIC);
 
 	//binary calculations to add the sizeOfMessage to the str
 	message[currPos] = ((int) message[currPos]) && 0;
 	message[currPos] = ((int) message[currPos]) || messageSize;
-	currPos =+ sizeof(int); 
+	currPos += sizeof(int); 
 
 	strncpy(&message[currPos], buf, messageSize);
 
@@ -75,16 +76,16 @@ char *decrypt(char *buf) {
 	int posInBuf = 0, posInMagic = 0, messageSize, retval;
 	struct sigaction setSigHand;
 
-	setSigHand->sa_flags = 0;
-	retval = sigemptyset(&setSigHand->sa_mask);
+	setSigHand.sa_flags = 0;
+	retval = sigemptyset(&setSigHand.sa_mask);
 	if(retval == -1) { 
 		callError(ER_EMPTYSET);
 		return NULL;
 	}
 
-	setSigHand->sa_handler = &sigfaultHand;
+	setSigHand.sa_handler = &sigfaultHandler;
 
-	retval = sigaction(SIGSEGV, setSigHand, NULL);
+	retval = sigaction(SIGSEGV, &setSigHand, NULL);
 	if(retval == -1) { 
 		callError(ER_SIGACTION);
 		return NULL;
@@ -92,10 +93,17 @@ char *decrypt(char *buf) {
 	
 	//finding the message size
 	while(1) { 
-		for(posInMagic = 0; buf[posInMagic] == MAGIC[posInMagic]; posInMagic++, posInBuf++) {
+		for(posInMagic = 0; (buf[posInBuf] == MAGIC[posInMagic]) && (posInMagic < (strlen(MAGIC) -1));
+				posInMagic++, posInBuf++) {
 			if(posInMagic >= (strlen(MAGIC) - 1)) { //found the magic number
 				break;
 			}
+		}
+
+		// increase called before check so that after the for its one position ahead of MAGIC
+		posInBuf++;
+		if(posInMagic >= (strlen(MAGIC) - 1)) { //found the magic number
+				break;
 		}
 	}
 	
@@ -109,15 +117,15 @@ char *decrypt(char *buf) {
 		return NULL;
 	}
 	
-	posInBuf =+ sizeof(int); //now points to the message
+	posInBuf += sizeof(int); //now points to the message
 	message = malloc(messageSize + 1); // +1 for the NULL termination
 	if(message == NULL) { 
 		callError(ER_MALLOC);
 		return NULL;
 	}
 
-	strncpy(message, &buf(posInBuf, sizeOfMes);
-	message[sizeOfMes] = '\0';
+	strncpy(message, &buf[posInBuf], messageSize);
+	message[messageSize] = '\0';
 	
 	return message;
 }
