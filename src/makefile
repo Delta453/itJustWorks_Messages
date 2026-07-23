@@ -1,13 +1,15 @@
 BASIC_FLAGS = -Wall -g 
 EXTRA_FLAGS = -fsanitize=address
-OBJECTFILES = encryption.o error.o #object files for the final executable
-TESTOBJECTFILES = testEncryption.o
+OBJECTFILES = encryption.o error.o message.o #object files for the final executable
 
-test: encryption.o testEncryption.o error.o
-	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) error.o encryption.o testEncryption.o -o test
+test: $(OBJECTFILES) test.o
+	gcc $(OBJECTFILES) $(EXTRA_FLAGS) test.o -o test
 
-testEncryption.o: testEncryption.c encryption.h
-	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) testEncryption.c -c
+test.o: message.h test.c 
+	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) test.c -c 
+
+message.o: message.c message.h error.h encryption.h
+	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) message.c -c 
 
 encryption.o: encryption.c encryption.h error.h
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) encryption.c -c 
@@ -17,4 +19,3 @@ error.o: error.c error.h
 
 clean: 
 	rm -f $(OBJECTFILES)
-	rm -f $(TESTOBJECTFILES)

@@ -1,6 +1,5 @@
 /* Encryption: random buffer, MagicNum, sizeOfMes, message, random buffer
- *
- * WARNINGS: realy, really easy to break, dont use on open web
+ * Warning: This is a very basic encryption and should not be used for any reason other than testing
  *
  * Author: Konstantinos Galliopoulos*/
 
@@ -62,8 +61,8 @@ char *encrypt(char *buf) {
 	currPos += strlen(MAGIC);
 
 	//binary calculations to add the sizeOfMessage to the str
-	message[currPos] = ((int) message[currPos]) && 0;
-	message[currPos] = ((int) message[currPos]) || messageSize;
+	message[currPos] = ((int) message[currPos]) & 0;
+	message[currPos] = ((int) message[currPos]) | messageSize;
 	currPos += sizeof(int); 
 
 	strncpy(&message[currPos], buf, messageSize);

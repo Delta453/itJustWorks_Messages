@@ -3,8 +3,10 @@
 
 typedef enum{
 	ER_MALLOC,
+	ER_REALLOC,
 	ER_EMPTYSET,
-	ER_SIGACTION
+	ER_SIGACTION, 
+	ER_GETTIME
 } call_error_t;
 
 /* calls perror and gives it the valid str for the error
