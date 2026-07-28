@@ -20,11 +20,13 @@ typedef enum {
  * Parameters
  * user: a ptr to a NULL ended string which is the name of the user
  * type: the type of the message as defined by the enum
- * message: if the type is PAC_MESSAGE the message that will be contained, else can be set to NULL
+ * message: if the type is PAC_MESSAGE the message must be null terminated and must not contain '\0'
+ * , else can be set to NULL
  * meSize: if the type is PAC_MESSAGE the size of the message, else can be left 0
+ * sizeOfMessasge: where the size of the encrypted message is going to be saved
  *
  * Returns: A ptr to a non NULL ended message, NULL in case of failure*/
-extern char *createMessage(char *user, packetType_t type, char *containedMessage);
+extern char *createMessage(char *user, packetType_t type, char *containedMessage, int *sizeOfMessage);
 
 /*Description: Breaks a packet down to its information, the package given must be a null ended string
  *
@@ -34,9 +36,11 @@ extern char *createMessage(char *user, packetType_t type, char *containedMessage
  * message: if the type is PAC_MESSAGE the message contained, else it can be set to NULL
  * messageSize: if the type is PAC_MESSAGE will contain the size of the message excluding the '\0'
  * time: the time of the OS at the time the message was created
+ * toBreakSize: the size of the encrypted message
  *
  * Returns: The username, NULL in case of failure*/
-extern char *breakMessage(char* messageToBreak, packetType_t *type, char **containedMessage, unsigned int *messageSize, struct tm **time);
+extern char *breakMessage(char* messageToBreak, packetType_t *type, char **containedMessage, 
+		unsigned int *messageSize, struct tm **time, int toBreakSize);
 
 /*Creates packet without encryption that is NOT null ended. Should be freed after use
  *

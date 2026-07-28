@@ -12,13 +12,7 @@
 #include"error.h"
 #include"encryption.h"
 
-int segfaultTrue = 0; //used in the decrypt function to check failure
 int seedSet = 0; //if 1 then a seed has been set
-
-static void sigfaultHandler() { 
-	printf("Encryption crashed\n");
-	segfaultTrue = 1;
-}
 
 //Returns a random number based on the current time
 //The number will be between low and high brace
@@ -32,24 +26,25 @@ static int genRand(int lowBrace, int highBrace) {
 		srand(randSeed.tv_nsec);
 	}
 
-	//to avoid a 10 seconds delay on finding the randoms
 	curr = rand();
 	curr = (curr % highBrace) + lowBrace;
+	if(curr > MAXBUFSIZE) { 
+		curr = MAXBUFSIZE;
+	}
 
 	return curr;
 }
 
-char *encrypt(char *buf) { 
+char *encrypt(char *buf, int bufferSize, int *encryptedSize) { 
 	char* message;
-	int messageSize, encryptedSize, currPos;
+	int currPos;
 	int startBufferSize, endBufferSize;
 
-	messageSize = strlen(buf);
 	startBufferSize = genRand(MINBUFSIZE, MAXBUFSIZE);
 	endBufferSize = genRand(MINBUFSIZE, MAXBUFSIZE);
-	encryptedSize = startBufferSize + endBufferSize + messageSize + sizeof(int) + strlen(MAGIC);
+	*encryptedSize = startBufferSize + endBufferSize + bufferSize + sizeof(int) + strlen(MAGIC);
 	
-	message = malloc(encryptedSize);
+	message = malloc(*encryptedSize);
 	if(message == NULL) { 
 		callError(ER_MALLOC);
 		return NULL;
@@ -60,57 +55,38 @@ char *encrypt(char *buf) {
 	memcpy(&message[currPos], MAGIC, strlen(MAGIC));
 	currPos += strlen(MAGIC);
 
-	//binary calculations to add the sizeOfMessage to the str
-	message[currPos] = ((int) message[currPos]) & 0;
-	message[currPos] = ((int) message[currPos]) | messageSize;
+	//adds the size of message to the buffer
+	memcpy(&message[currPos], &bufferSize, sizeof(int));
 	currPos += sizeof(int); 
 
-	strncpy(&message[currPos], buf, messageSize);
+	memcpy(&message[currPos], buf, bufferSize);
 
 	return message;
 }
 
-char *decrypt(char *buf) {	
+char *decrypt(char *buf, int encryptedSize) {	
 	char * message;
-	int posInBuf = 0, posInMagic = 0, messageSize, retval;
-	struct sigaction setSigHand;
+	int messageSize, posInBuf = 0;
+	int magicSize = strlen(MAGIC);
+	
+	for(int curr = 0; posInBuf < encryptedSize; posInBuf++) { 
+		if(curr >= magicSize) { //check if at end of MAGIC
+			break;
+		}
 
-	setSigHand.sa_flags = 0;
-	retval = sigemptyset(&setSigHand.sa_mask);
-	if(retval == -1) { 
-		callError(ER_EMPTYSET);
-		return NULL;
+		if( buf[posInBuf] == MAGIC[curr]) { 
+			curr++;
+		}
+		else {
+			curr = 0;
+		}
 	}
 
-	setSigHand.sa_handler = &sigfaultHandler;
-
-	retval = sigaction(SIGSEGV, &setSigHand, NULL);
-	if(retval == -1) { 
-		callError(ER_SIGACTION);
+	if((posInBuf == encryptedSize) || ((encryptedSize - posInBuf) < sizeof(int))) { 
 		return NULL;
 	}
 	
-	//finding the message size
-	while(1) { 
-		for(posInMagic = 0; (buf[posInBuf] == MAGIC[posInMagic]) && (posInMagic < (strlen(MAGIC) -1));
-				posInMagic++, posInBuf++) {
-			if(posInMagic >= (strlen(MAGIC) - 1)) { //found the magic number
-				break;
-			}
-		}
-
-		// increase called before check so that after the for its one position ahead of MAGIC
-		posInBuf++;
-		if(posInMagic >= (strlen(MAGIC) - 1)) { //found the magic number
-				break;
-		}
-	}
-	
-	if(segfaultTrue) { //chance of a segfault incase there is no magicNum
-		return NULL; 
-	}
-
-	messageSize = (int) buf[posInBuf];
+	memcpy(&messageSize, &buf[posInBuf], sizeof(int));
 
 	if(messageSize < 0) { //check the message size
 		return NULL;
@@ -123,7 +99,7 @@ char *decrypt(char *buf) {
 		return NULL;
 	}
 
-	strncpy(message, &buf[posInBuf], messageSize);
+	memcpy(message, &buf[posInBuf], messageSize);
 	message[messageSize] = '\0';
 	
 	return message;

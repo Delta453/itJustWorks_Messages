@@ -4,11 +4,17 @@
 #include"error.h" 
 #include<stdlib.h>
 #include<string.h>
+#include<string.h>
 #include<time.h>
 
-char *createMessage(char *user, packetType_t type, char *containedMessage) { 
+char *createMessage(char *user, packetType_t type, char *containedMessage, int *sizeOfMessage) { 
 	char *message, *packet;
 	int messageSize = 0;
+	int packetSize = strlen(user) + sizeof(type) + 6*sizeof(int);
+
+	if(type == PAC_MESSAGE) { 
+		packetSize += sizeof(int) + strlen(containedMessage);
+	}
 
 	if(type == PAC_MESSAGE) { 
 		messageSize = strlen(containedMessage);
@@ -19,17 +25,17 @@ char *createMessage(char *user, packetType_t type, char *containedMessage) {
 		return NULL;
 	}
 
-	message = encrypt(packet);
+	message = encrypt(packet, packetSize, sizeOfMessage);
 	free(packet);
 	return message;
 }
 
 char *breakMessage(char *messageToBreak, packetType_t *type, char **containedMessage, unsigned int *messageSize, 
-		struct tm **time) { 
+		struct tm **time, int toBreakSize) { 
 	char *packet;
 	char *username;
 
-	packet = decrypt(messageToBreak);
+	packet = decrypt(messageToBreak, toBreakSize);
 	if(packet == NULL) { 
 		return NULL;
 	}
@@ -41,25 +47,25 @@ char *breakMessage(char *messageToBreak, packetType_t *type, char **containedMes
 
 // Adds the time information to a packet
 // Parameters: position is from which point to add the time info
-static void addTime(char *packet, struct tm *time, int position) { 
+static void addTime(char *packet, struct tm *time) { 
 	int intSize = sizeof(int);
 
-	memcpy(&packet[position], &time->tm_year, intSize);
-	memcpy(&packet[position], &time->tm_mon, intSize);
-	memcpy(&packet[position], &time->tm_mday, intSize);
-	memcpy(&packet[position], &time->tm_hour, intSize);
-	memcpy(&packet[position], &time->tm_min, intSize);
-	memcpy(&packet[position], &time->tm_sec, intSize);
+	memcpy(&packet[0], &time->tm_year, intSize);
+	memcpy(&packet[1*intSize], &time->tm_mon, intSize);
+	memcpy(&packet[2*intSize], &time->tm_mday, intSize);
+	memcpy(&packet[3*intSize], &time->tm_hour, intSize);
+	memcpy(&packet[4*intSize], &time->tm_min, intSize);
+	memcpy(&packet[5*intSize], &time->tm_sec, intSize);
 }
 
 // Extracts the time out of a packet
 static void readTime(char *packet, struct tm *time) { 
-	time->tm_year = (int) packet[0];
-	time->tm_mon = (int) packet[4];
-	time->tm_mday = (int) packet[8];
-	time->tm_hour = (int) packet[12];
-	time->tm_min = (int) packet[16];
-	time->tm_sec = (int) packet[20];
+	memcpy(&time->tm_year, &packet[0], sizeof(int));
+	memcpy(&time->tm_mon, &packet[4], sizeof(int));
+	memcpy(&time->tm_mday, &packet[8], sizeof(int));
+	memcpy(&time->tm_hour, &packet[12], sizeof(int));
+	memcpy(&time->tm_min, &packet[16], sizeof(int));
+	memcpy(&time->tm_sec, &packet[20], sizeof(int));
 }
 
 char *pack(char *user, packetType_t type, char *message, unsigned int memSize) {
@@ -94,7 +100,7 @@ char *pack(char *user, packetType_t type, char *message, unsigned int memSize) {
 	}
 	currentPackSize += sizeof(int)*6;
 	retPacket = reallocRet;
-	addTime(retPacket, &timeCurrent, usernameSize);
+	addTime(&retPacket[usernameSize + 1], &timeCurrent);
 
 	//insert the packet type
 	reallocRet = realloc(retPacket, currentPackSize + sizeof(packetType_t));
