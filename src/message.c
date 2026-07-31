@@ -10,7 +10,7 @@
 char *createMessage(char *user, packetType_t type, char *containedMessage, int *sizeOfMessage) { 
 	char *message, *packet;
 	int messageSize = 0;
-	int packetSize = strlen(user) + sizeof(type) + 6*sizeof(int);
+	int packetSize = strlen(user) + 1+ sizeof(type) + 6*sizeof(int);// +1 for the \0 of the user
 
 	if(type == PAC_MESSAGE) { 
 		packetSize += sizeof(int) + strlen(containedMessage);
@@ -68,7 +68,7 @@ static void readTime(char *packet, struct tm *time) {
 	memcpy(&time->tm_sec, &packet[20], sizeof(int));
 }
 
-char *pack(char *user, packetType_t type, char *message, unsigned int memSize) {
+char *pack(char *user, packetType_t type, char *message, unsigned int messageSize) {
 	char *retPacket; //packet to be returned 
 	char *reallocRet;
 	int usernameSize = strlen(user);
@@ -111,14 +111,14 @@ char *pack(char *user, packetType_t type, char *message, unsigned int memSize) {
 	}
 	retPacket = reallocRet;
 	currentPackSize += sizeof(packetType_t);
-	retPacket[currentPackSize - sizeof(packetType_t)] = type;
+	memcpy(&retPacket[currentPackSize - sizeof(packetType_t)], &type, sizeof(packetType_t));
 
 	if(type != PAC_MESSAGE) {
 		return retPacket;
 	}
 
 	//inserting the message into the packet
-	reallocRet = realloc(retPacket, currentPackSize + sizeof(int) + memSize);
+	reallocRet = realloc(retPacket, currentPackSize + sizeof(int) + messageSize);
 	if(reallocRet == NULL) { 
 		callError(ER_REALLOC);
 		free(retPacket);
@@ -126,8 +126,8 @@ char *pack(char *user, packetType_t type, char *message, unsigned int memSize) {
 	}
 
 	retPacket = reallocRet;
-	retPacket[currentPackSize] = memSize;
-	strncpy(&retPacket[currentPackSize + sizeof(int)], message, memSize);
+	memcpy(&retPacket[currentPackSize], &messageSize, sizeof(int));// insert the message size into the packet
+	memcpy(&retPacket[currentPackSize + sizeof(int)], message, messageSize); //insert the message into the packet
 	return retPacket;
 }
 
@@ -158,7 +158,7 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 	current += 6*sizeof(int);
 
 	//getting the package type
-	*type = (packetType_t) packet[current];
+	memcpy(type, &packet[current], sizeof(packetType_t));
 
 	if(*type != PAC_MESSAGE) { 
 		return username;
@@ -167,7 +167,7 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 	current += sizeof(packetType_t);
 
 	//getting the message
-	*messageSize = (unsigned int) packet[current];
+	memcpy(messageSize, &packet[current], sizeof(unsigned int));
 	current += sizeof(unsigned int);
 	*message = malloc(*messageSize + 1);
 	if(message == NULL) {
@@ -176,7 +176,7 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 		return NULL;
 	}
 
-	strncpy(*message, &packet[current], *messageSize);
-	message[current + *messageSize] = '\0';
+	memcpy(*message, &packet[current], *messageSize);
+	(*message)[*messageSize] = '\0';
 	return username;
 }
