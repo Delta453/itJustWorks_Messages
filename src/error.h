@@ -2,11 +2,22 @@
 #define ERROR
 
 typedef enum{
+	ER_READ,
+	ER_WRITE,
+	ER_PRINTF,
+	ER_SCANF,
 	ER_MALLOC,
 	ER_REALLOC,
+	ER_PIPE,
 	ER_EMPTYSET,
 	ER_SIGACTION, 
-	ER_GETTIME
+	ER_GETTIME,
+	ER_SOCKET,
+	ER_CONNECT,
+	ER_PCREATE,
+	ER_PATTRINIT,
+	ER_PATTRDE,
+	ER_PDETACH
 } call_error_t;
 
 /* calls perror and gives it the valid str for the error

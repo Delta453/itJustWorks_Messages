@@ -65,4 +65,34 @@ extern char *pack(char *user, packetType_t type, char *message, unsigned int mes
  * Returns: The username, NULL in case of failure*/
 extern char *upack(char* packet, packetType_t *type, char **message, unsigned int *messageSize, struct tm **time);
 
+/*Description: Makes a packet with the following structure: int that contains the size of the message including
+ * the int, the message
+ *
+ * Parameters: 
+ * 	packet: the packet that the message carries
+ *	packetSize: where the size of the packet is gonna be saved
+ *	messageSize: the size of the message to be stored in a packet
+ *	fd: the file descriptor that this packet came from
+ *
+ *	Returns: NULL incase of failure, a ptr to the message incase of success must be freed after use
+ * */
+extern char *pipeMessage(char *packet, int *packetSize, int messageSize, int fd);
+
+/* Description: Reads from the fd a message made by the pipeMessage function. The unpacks it
+ *
+ * Parameters: 
+ * 	readFd: the fd that this fucntion is going to read from
+ * 	srcFd: the fd that points to the socket that the message came from
+ * 	packetSize: where the size of the packet contained within the message is stored
+ *
+ * 	Returns: the packet contained, NULL incase of failure should be freed after use*/
+extern char *upipeMessage(int readFd, int *srcFd, int *packetSize);
+
+// Uses the read function and insures that it doesnt read less than size
+// Returns: -1 icnase of failure, 0 incase of sucess
+extern int rread(int fd, void *dst, int size);
+
+// Uses the write function and guarentess that it will write size bytes
+// Returns: -1 incase of failure, 0 incase of success
+extern int wwrite(int fd, char *src, int size);
 #endif

@@ -1,8 +1,9 @@
 // Writing the time in the packet is implemented in a wrong way
 #include"encryption.h"
-#include"message.h"
+#include"message.h" 
 #include"error.h" 
 #include<stdlib.h>
+#include<unistd.h>
 #include<string.h>
 #include<string.h>
 #include<time.h>
@@ -179,4 +180,81 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 	memcpy(*message, &packet[current], *messageSize);
 	(*message)[*messageSize] = '\0';
 	return username;
+}
+
+char *pipeMessage(char* packet, int *packetSize, int messageSize, int fd) { 
+	char *message;
+
+	(*packetSize) = messageSize + sizeof(fd) + sizeof(int);
+
+	message = malloc((*packetSize));
+	if(message == NULL) { 
+		callError(ER_MALLOC);
+		return NULL;
+	}
+
+	memcpy(message, &(*packetSize), sizeof(int));
+	memcpy(&message[sizeof(int)], &fd, sizeof(int));
+	memcpy(&message[2*sizeof(int)], &packet, messageSize);
+	return message;
+}
+
+// Uses the read function and insures that it doenst read less than size
+// Returns: -1 incase of failure, 0 incase of success
+int rread(int fd, void *dst, int size) { 
+	int retval = 0;
+	int count = 0;
+
+	do { 
+		retval = read(fd, dst, size);
+		if(retval < 0) { 
+			return -1;
+		}
+
+		count += retval;
+	} while(count < size);
+
+	return 0;
+}
+
+int wwrite(int fd, char*src, int size) { 
+	int retval;
+	int count = 0;
+
+	do { 
+		retval = write(fd, src, size);
+		if(retval < 0) { 
+			return -1;
+		}
+
+		count += retval;
+	} while(count < size);
+
+	return 0;
+}
+
+char *upipeMessage(int readFd, int *srcFd, int *packetSize) { 
+	char *packet;
+	int messageSize; 
+
+	if(rread(readFd, &messageSize, sizeof(int))) { 
+		return NULL;
+	}
+
+	packet = malloc(messageSize - 2*sizeof(int));
+	if(packet == NULL) {
+		callError(ER_MALLOC);
+		return NULL;
+	}
+
+	if(rread(readFd, srcFd, sizeof(srcFd))) { 
+		return NULL;
+	}
+
+	if(rread(readFd, packet, messageSize - 2*sizeof(int))) { 
+		return NULL;
+	}
+
+	*packetSize = messageSize -2*sizeof(int);
+	return packet;
 }
