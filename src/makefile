@@ -5,6 +5,9 @@ EXTRA_FLAGS = -fsanitize=address
 OBJECTFILES = encryption.o error.o message.o server.o 
 EXECUTABLES = server client
 
+client: $(OBJECTFILES) client.o
+	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) $(OBJECTFILES) client.o -o client
+
 server: $(OBJECTFILES) server.o 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) $(OBJECTFILES) server.o -o server
 

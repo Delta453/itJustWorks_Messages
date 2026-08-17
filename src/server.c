@@ -15,7 +15,6 @@
  * Author: konstantinos galliopoulos
  * Returns: -1 incase of a sys call failure*/
 
-
 #define _GNU_SOURCE //required for accept4 function
 
 #include<stdio.h>

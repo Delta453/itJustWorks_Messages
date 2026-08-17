@@ -48,6 +48,10 @@ void callError(call_error_t error) {
 			perror("Socket failed");
 			break;
 		}
+		case ER_BIND: { 
+			perror("Bind failed");
+			break;
+		}
 		case ER_CONNECT: { 
 			perror("Connect failed");
 			break;
