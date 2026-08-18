@@ -6,17 +6,24 @@
  * Returns: -1 in case of sys/call failure, 0 incase success
 */
 
-#include<stdin.h>
+#include<stdio.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<string.h>
+#include<pthread.h>
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<netdb.h>
+#include<errno.h>
+#include"message.h"
+#include"error.h"
 
 #define MAXSIZE 4000 //the maximum size the message can be in characters
 
 #define HOSTNAME "serverpi" // the host name of the server
 #define PORTNUM "50001" //the port number used, default: 50001
 
-int shutdown = 0; //used to signal the other thread to close, set to 1 to order the other to close
+static int shutdownOrdered = 0; //used to signal the other thread to close, set to 1 to order the other to close
 
 /* Reads from stdin and packets the message using the message.h library and it writes it to 
  * the fd given. Returns 0 when user types q
@@ -30,47 +37,47 @@ int writeToSocket(int writefd) {
 	int messageSize;
 	int messageToSendSize;
 	char *messageToSend; //stores the result of the create message function
-	char *message[MAXSIZE]; //stores the input of the user
-	char *username[21];
-	char *scanfFormat[16]; 
+	char message[MAXSIZE]; //stores the input of the user
+	char username[21];
+	char scanfFormat[16]; 
 
 	retval = snprintf(scanfFormat, sizeof(scanfFormat), "%%%ds", MAXSIZE);
 	if(retval < 0) { 
 		perror("snprintf failed\n");
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1;
 	}
 
 	retval = printf("### System: insert your username (max 20 chars)\n"); //getting the username
 	if(retval < 0) { 
 		callError(ER_PRINTF);
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1;
 	}
 
 	retval = scanf(" %20s", username);  
 	if(retval < 0) { 
 		callError(ER_SCANF);
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1; 
 	}
 
 	//sending the log in message
 	messageToSend = createMessage(username, PAC_LOGIN, NULL, &messageToSendSize); //sending the login request
 	if(messageToSend == NULL) { 
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1;
 	}
 
-	retval = wwrite(writefd, messageToSendSize, sizeof(messageToSendSize));
+	retval = wwrite(writefd, (void*) &messageToSendSize, sizeof(messageToSendSize));
 	if(retval == -1) { 
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1;
 	}
 
 	retval = wwrite(writefd, messageToSend, messageToSendSize);
 	if(retval == -1) { 
-		shutdown = 1;
+		shutdownOrdered = 1;
 		return -1;
 	}
 
@@ -78,29 +85,29 @@ int writeToSocket(int writefd) {
 		retval = scanf(scanfFormat, message);
 		if(retval == -1) { 
 			callError(ER_SCANF);
-			shutdown = 1;
+			shutdownOrdered = 1;
 			return -1;
 		}
 
 		if(!strncmp(message, "q", 2)) { //user asks to quit
-			shudown = 1;
+			shutdownOrdered = 1;
 			
 			//sending log out message
 			messageToSend = createMessage(username, PAC_LOGIN, NULL, &messageToSendSize); //sending the login request
 			if(messageToSend == NULL) { 
-				shutdown = 1;
+				shutdownOrdered = 1;
 				return -1;
 			}
 
-			retval = wwrite(writefd, messageToSendSize, sizeof(messageToSendSize));
+			retval = wwrite(writefd, (void*) &messageToSendSize, sizeof(messageToSendSize));
 			if(retval == -1) { 
-				shutdown = 1;
+				shutdownOrdered = 1;
 				return -1;
 			}
 
 			retval = wwrite(writefd, messageToSend, messageToSendSize);
 			if(retval == -1) { 
-				shutdown = 1;
+				shutdownOrdered = 1;
 				return -1;
 			}
 
@@ -108,23 +115,23 @@ int writeToSocket(int writefd) {
 		}
 
 		messageSize = retval;
-		retval = wwrite(writefd, messageSize, sizeof(messageSize));
+		retval = wwrite(writefd, (void*) &messageSize, sizeof(messageSize));
 		if(retval == -1) { 
 			callError(ER_WRITE);
-			shutdown = 1;
+			shutdownOrdered = 1;
 			return -1;
 		}
 
 		messageToSend = createMessage(username, PAC_MESSAGE, message, &messageToSendSize);
-		retval = wwrite(writefd, messageToSendSize, sizeof(messageToSendSize));
+		retval = wwrite(writefd, (void*) &messageToSendSize, sizeof(messageToSendSize));
 		if(retval == -1) {
-			shutdown = 1;
+			shutdownOrdered = 1;
 			return -1;
 		}
 
 		retval = wwrite(writefd, messageToSend, messageToSendSize);
 		if(retval == -1) { 
-			shutdown = 1;
+			shutdownOrdered = 1;
 			return -1;
 		}
 
@@ -142,6 +149,7 @@ int writeToSocket(int writefd) {
  *
  * Returns: -1 on sys/call failure, 0 on success -may not have printed a message*/
 int printMessage(int readfd) { 
+	int retval = 0;
 	char *containedMessage; // if type PAC_MESSAGE then the message contained
 	char *message; //the message read from the socket
 	char *username;
@@ -161,7 +169,7 @@ int printMessage(int readfd) {
 
 	if(messageSize < 0) { 
 		wwrite(STDERR_FILENO, "### System: message size negative warning\n", 
-				strlen("### System: message size negative warning\n");
+				strlen("### System: message size negative warning\n"));
 		return 0;
 	}
 
@@ -181,7 +189,18 @@ int printMessage(int readfd) {
 		return -1;
 	}
 
-	retval = printf("[%d/%d/%d %d/%d/%d] %s: ");
+	if(type != PAC_MESSAGE) { // used so that a log out/in cant be faked by the user
+		retval = printf("#System: ");
+		if(retval < 0) { 
+			callError(ER_PRINTF);
+			free(containedMessage);
+			free(time);
+			return -1;
+		}
+	}
+
+	retval = printf("[%d/%d/%d %d/%d/%d] %s: ", time->tm_year + 1900, time->tm_mon, time->tm_mday, 
+			time->tm_hour, time->tm_min, time->tm_sec, username);
 
 	free(username);
 	free(time);
@@ -189,23 +208,39 @@ int printMessage(int readfd) {
 
 	if(retval == -1) {
 		callError(ER_PRINTF);
-		free(messageContained);
+		free(containedMessage);
+		free(time);
 		return -1;
 	}
 
 	switch(type) { 
 		case PAC_MESSAGE: {
-			retval = printf("%s\n", containedMessage);
-			free(containedMessage);
-			if(retval == -1) { 
+			retval = printf("%s", containedMessage);
+			free(time);
+			if(retval == -1) {
+				free(containedMessage);
+				callError(ER_PRINTF);
 				return -1;
 			}
 
+			//adds a \n at the end of the message if one wasnt written in
+			if(containedMessage[containedMessageSize -1] == '\n') { 
+				retval = wwrite(STDOUT_FILENO, "\n", 1);
+				if(retval < 0) { 
+					callError(ER_WRITE);
+					free(containedMessage);
+					return -1;
+				}
+			}
+
+			free(containedMessage);
 			break;
 		}
-		case PAC_LOGIC: {
+		case PAC_LOGIN: {
 			retval = printf("logged in\n");
 			if(retval == -1) { 
+				free(time);
+				callError(ER_PRINTF);
 				return -1;
 			}
 			
@@ -214,6 +249,8 @@ int printMessage(int readfd) {
 		case PAC_ULOG: { 
 			retval = printf("logged out\n");
 			if(retval == -1) { 
+				free(time);
+				callError(ER_PRINTF);
 				return -1;
 			}
 			
@@ -221,10 +258,14 @@ int printMessage(int readfd) {
 		}
 	}
 
+	free(time);
+
 	return 0;
 }
 
-void printConnection() { //prints a notification to STDOUT that connection to server was successful
+int printConnection() { //prints a notification to STDOUT that connection to server was successful
+	int retval = 0;
+
 	retval = printf("### System: Connected with the server successfully\n");
 	if(retval < 0) { 
 		callError(ER_PRINTF);
@@ -239,7 +280,6 @@ void printConnection() { //prints a notification to STDOUT that connection to se
 }
 
 int main(int argc, char *argv[]) { 
-	int writeSocket = 0; //fd's of the sockets connected to the server
 	int retval = 0;
 	int threadRetval;
 	pthread_t readThread;
@@ -247,7 +287,7 @@ int main(int argc, char *argv[]) {
 	
 	//socket variables
 	int findReadSocket = 0; // the read socket connects to this socket 
-	int readSocket = 0
+	int readSocket = 0;
 	int writeSocket = 0; //fd's of the sockets connected to the server
 	struct sockaddr_in clientAddr; // the address of the client/user to bind it to the findReadSocket
 	struct addrinfo clientAddrHint;
@@ -267,13 +307,13 @@ int main(int argc, char *argv[]) {
 	clientAddrHint.ai_socktype = SOCK_STREAM;
 	clientAddrHint.ai_flags = AI_PASSIVE;
 
-	retval = getaddrinfo(NULL, PORTNUM, &clientAddrHint, (struct addrinfo*) &clientAddr);
+	retval = getaddrinfo(NULL, PORTNUM, &clientAddrHint, (struct addrinfo**) &clientAddr);
 	if(retval) { 
 		perror("Get addr of client failed");
 		return -1;
 	}
 
- 	retval = bind(findReadSocket, &clientAddr, sizeof(clientAddr));
+ 	retval = bind(findReadSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr));
 	if(retval == -1) { 
 		callError(ER_BIND);
 		return -1;
@@ -286,7 +326,7 @@ int main(int argc, char *argv[]) {
 	serverAddrHint.ai_family = AF_INET;
 	serverAddrHint.ai_socktype = SOCK_STREAM;
 
- 	retval = getaddrinfo(HOSTNAME, PORTNUM, serverAddrHint, (struct addrinfo*) &serverAddr);
+ 	retval = getaddrinfo(HOSTNAME, PORTNUM, &serverAddrHint, (struct addrinfo**) &serverAddr);
 	if(retval) { 
 		perror("Get addr of server failed");
 		return -1;
@@ -298,37 +338,37 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	retval = connect(writeSocket, &serverAddr, sizeof(serverAddr));
+	retval = connect(writeSocket, (struct sockaddr*) &serverAddr, sizeof(serverAddr));
 	if(retval) { 
 		callError(ER_CONNECT);
 		return -1;
 	}
 
-	retval = pthread_init_attr(&readThreadAttr);
+	retval = pthread_attr_init(&readThreadAttr);
 	if(retval < 0) { 
 		callError(ER_PATTRINIT);
 		return -1;
 	}
 
-	retval = pthread_create(&readThread, &readThreadAttr, &writeToSocket, writeSocket);
+	retval = pthread_create(&readThread, &readThreadAttr, (void*) &writeToSocket, (void*) &writeSocket);
 	if(retval < 0) { 
 		callError(ER_PCREATE);
 		return -1;
 	}
 
 	do { //insure the readSocket is AF_INET type
-		readSocket = accept(&findReadSocket, acceptedAddr, NULL);
+		readSocket = accept(findReadSocket, (struct sockaddr*) &acceptedAddr, NULL);
 		if(readSocket < 0) { 
 			callError(ER_ACCEPT);
 			close(readSocket);
 			close(findReadSocket);
 			close(writeSocket);
-			shutdown = 1;
+			shutdownOrdered = 1;
 			pthread_join(readThread, NULL);
 			return -1;
 		}
 
-		if(acceptedAddr.sa_family == AF_INET) { 
+		if(acceptedAddr.ai_family == AF_INET) { 
 			break;
 		}
 
@@ -336,21 +376,25 @@ int main(int argc, char *argv[]) {
 	} while(1);
 
 	close(findReadSocket);
-	printConnection();
+	retval = printConnection();
+	if(retval < 0) { 
+		return -1;
+	}
 
-	while(1) { // loop that prints a message from the backlog and checks for possibility for failure or shutdown
+	// loop that prints a message from the backlog and checks for possibility for failure or shutdownOrdered
+	while(1) { 
 		retval = printMessage(readSocket);
 		if(retval < 0) { //printing message fails
 			close(readSocket);
 			close(writeSocket);
-			shutdown = 1;
+			shutdownOrdered = 1;
 			if(pthread_join(readThread, NULL)) {
 				callError(ER_PJOIN);
 				return -1;
 			}
 		}
 
-		if(shutdown) { 
+		if(shutdownOrdered) { 
 			if(pthread_join(readThread, (void**) &threadRetval)) { 
 				callError(ER_PJOIN);
 			}

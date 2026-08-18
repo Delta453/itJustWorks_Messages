@@ -2,7 +2,9 @@ BASIC_FLAGS = -Wall -g
 EXTRA_FLAGS = -fsanitize=address
 
 #object files used for both the executables
-OBJECTFILES = encryption.o error.o message.o server.o 
+OBJECTFILES = encryption.o error.o message.o
+#object files not common across all executables
+EXECOBJECTFILES = server.o client.o
 EXECUTABLES = server client
 
 client: $(OBJECTFILES) client.o
@@ -10,6 +12,9 @@ client: $(OBJECTFILES) client.o
 
 server: $(OBJECTFILES) server.o 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) $(OBJECTFILES) server.o -o server
+
+client.o: $(OBJECTFILES)
+	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) client.c -c
 
 server.o: server.c message.h error.h 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) server.c -c
@@ -24,4 +29,4 @@ error.o: error.c error.h
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) error.c -c
 
 clean: 
-	rm -f $(OBJECTFILES) $(EXECUTABLES)
+	rm -f $(OBJECTFILES) $(EXECOBJECTFILES) $(EXECUTABLES)

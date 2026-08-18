@@ -56,8 +56,16 @@ void callError(call_error_t error) {
 			perror("Connect failed");
 			break;
 		}
+		case ER_ACCEPT: { 
+			perror("Accept failed");
+			break;
+		}
 		case ER_PCREATE: {
 			perror("pthread_create failed");
+			break;
+		}
+		case ER_PJOIN: { 
+			perror("pthread_join faild");
 			break;
 		}
 		case ER_PATTRINIT: { 
