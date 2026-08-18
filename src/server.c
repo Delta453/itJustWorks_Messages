@@ -67,6 +67,7 @@ int getListenSocket() {
 		return -1;
 	}
 
+	freeaddrinfo((struct addrinfo*) &address.sin_addr);
 	return fdToSocket;
 }	
 

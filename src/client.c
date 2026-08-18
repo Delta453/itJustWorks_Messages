@@ -277,6 +277,8 @@ int printConnection() { //prints a notification to STDOUT that connection to ser
 		callError(ER_PRINTF);
 		return -1;
 	}
+
+	return 0;
 }
 
 int main(int argc, char *argv[]) { 

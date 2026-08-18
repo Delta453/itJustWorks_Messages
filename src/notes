@@ -1,0 +1,5 @@
+MAke a way for the cleint to quit and the server to understnad it. 
+Make a way for the client to udnerstnad if the sever closed for whatever reason
+
+For messages: They start with the size OF THE FOLLOWING Message
+example:  "5hello"
