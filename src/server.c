@@ -27,6 +27,7 @@
 #include<stdlib.h>
 #include<errno.h>
 #include<fcntl.h>
+#include<string.h>
 #include"server.h"
 #include"message.h"
 #include"error.h"
@@ -35,25 +36,35 @@ int shutdownOrdered = 0; //used to tell when the user requested that the server 
 struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to be broadcasted
 
 int getListenSocket() { 
+	int retval;
 	int fdToSocket;
 	struct sockaddr_in address;
 	struct addrinfo getAddrHint;
 
 	fdToSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if(fdToSocket == -1) { 
+	if(fdToSocket < 0) { 
 		perror("Listening socket failed: Socket failed");
 		return -1;
 	}
 
 	address.sin_family = AF_INET;
 	address.sin_port = htons(atol(PORTNUM));
+
 	//getting the address
+	memset(&getAddrHint, 0, sizeof(getAddrHint));
 	getAddrHint.ai_family = AF_INET;
 	getAddrHint.ai_socktype = SOCK_STREAM;
 	getAddrHint.ai_flags = AI_PASSIVE;
 
-	if(getaddrinfo(NULL, PORTNUM, &getAddrHint, (struct addrinfo **) &address.sin_addr)) { 
-		perror("Listening socket failed: getaddrinfo failed");
+	retval = getaddrinfo(NULL, PORTNUM, &getAddrHint, (struct addrinfo **) &address.sin_addr);
+	if(retval) { 
+		if(retval != EAI_SYSTEM) { 
+			fprintf(stderr, "Listening socket failed: getaddrinfo failed: %s\n", gai_strerror(retval));
+		}
+		else { 
+			perror("Listening socket failed: Getaddrinfo failed");
+		}
+
 		return -1;
 	}
 
