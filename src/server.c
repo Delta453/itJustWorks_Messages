@@ -38,7 +38,7 @@ struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to 
 int getListenSocket() { 
 	int retval;
 	int fdToSocket;
-	struct sockaddr_in address;
+	struct addrinfo *address;
 	struct addrinfo getAddrHint;
 
 	fdToSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -47,16 +47,13 @@ int getListenSocket() {
 		return -1;
 	}
 
-	address.sin_family = AF_INET;
-	address.sin_port = htons(atol(PORTNUM));
-
 	//getting the address
 	memset(&getAddrHint, 0, sizeof(getAddrHint));
 	getAddrHint.ai_family = AF_INET;
 	getAddrHint.ai_socktype = SOCK_STREAM;
 	getAddrHint.ai_flags = AI_PASSIVE;
 
-	retval = getaddrinfo(NULL, PORTNUM, &getAddrHint, (struct addrinfo **) &address.sin_addr);
+	retval = getaddrinfo(NULL, PORTNUM, &getAddrHint, (struct addrinfo **) &address);
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "Listening socket failed: getaddrinfo failed: %s\n", gai_strerror(retval));
@@ -68,7 +65,7 @@ int getListenSocket() {
 		return -1;
 	}
 
-	if(bind(fdToSocket, (struct sockaddr*) &address, sizeof(address))) {
+	if(bind(fdToSocket, (struct sockaddr*) address->ai_addr, sizeof(struct sockaddr_in))) {
 		perror("Listening socket failed: Bind failed");
 		return -1;
 	}
@@ -78,7 +75,7 @@ int getListenSocket() {
 		return -1;
 	}
 
-	freeaddrinfo((struct addrinfo*) &address.sin_addr);
+	freeaddrinfo(address);
 	return fdToSocket;
 }	
 
@@ -360,10 +357,6 @@ int main(int argc, char* argv[]) {
 	node_t *clientList = NULL;
 	int listeningSocket;
 
-	if(printf("%s\n", CLI_BOOTUP) < 0) { 
-		callError(ER_PRINTF);
-	}
-
 	listeningSocket = getListenSocket();
 	if(listeningSocket == -1) {
 		return -1;
@@ -385,6 +378,10 @@ int main(int argc, char* argv[]) {
 
 	if(setFlushThread()) { 
 		return -1;
+	}
+
+	if(printf("%s\n", CLI_BOOTUP) < 0) { 
+		callError(ER_PRINTF);
 	}
 
 	while(1) { //loop for accepting new clients 
