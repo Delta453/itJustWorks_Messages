@@ -13,7 +13,7 @@ client: $(OBJECTFILES) client.o
 server: $(OBJECTFILES) server.o 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) $(OBJECTFILES) server.o -o server
 
-client.o: $(OBJECTFILES)
+client.o: $(OBJECTFILES) client.c 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) client.c -c
 
 server.o: server.c message.h error.h 

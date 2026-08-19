@@ -291,13 +291,13 @@ int main(int argc, char *argv[]) {
 	int findReadSocket = 0; // the read socket connects to this socket 
 	int readSocket = 0;
 	int writeSocket = 0; //fd's of the sockets connected to the server
-	struct sockaddr_in clientAddr; // the address of the client/user to bind it to the findReadSocket
+	struct addrinfo *clientAddr; // the address of the client/user to bind it to the findReadSocket
 	struct addrinfo clientAddrHint;
-	struct sockaddr_in serverAddr; // the address of the server needed to connect to it
+	struct addrinfo *serverAddr; // the address of the server needed to connect to it
 	struct addrinfo serverAddrHint;
 	struct addrinfo acceptedAddr; // used to check the accepted socket is of the right type
 
-	findReadSocket = socket(AF_INET, SOCK_STREAM, SOCK_NONBLOCK);
+	findReadSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if(findReadSocket < 0) { 
 		callError(ER_SOCKET);
 		return -1;
@@ -311,17 +311,23 @@ int main(int argc, char *argv[]) {
 
 	retval = getaddrinfo(NULL, PORTNUM, &clientAddrHint, (struct addrinfo**) &clientAddr);
 	if(retval) { 
-		perror("Get addr of client failed");
+		if(retval != EAI_SYSTEM) { 
+			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
+		}
+		else { 
+			perror("Getaddrinfo failed");
+		}
+
 		return -1;
 	}
 
- 	retval = bind(findReadSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr));
+ 	retval = bind(findReadSocket, (struct sockaddr*) clientAddr->ai_addr, sizeof(struct sockaddr_in));
 	if(retval == -1) { 
 		callError(ER_BIND);
 		return -1;
 	}
 
-	freeaddrinfo(&clientAddrHint); //listen socket is done
+	freeaddrinfo(clientAddr); //listen socket is done
 
 	//getting the server address
 	memset(&serverAddrHint, 0, sizeof(clientAddrHint));
@@ -330,21 +336,29 @@ int main(int argc, char *argv[]) {
 
  	retval = getaddrinfo(HOSTNAME, PORTNUM, &serverAddrHint, (struct addrinfo**) &serverAddr);
 	if(retval) { 
-		perror("Get addr of server failed");
+		if(retval != EAI_SYSTEM) { 
+			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
+		}
+		else { 
+			perror("Getaddrinfo failed");
+		}
+
 		return -1;
 	}
-	
+
 	writeSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if(writeSocket < 0) { 
 		callError(ER_SOCKET);
 		return -1;
 	}
 
-	retval = connect(writeSocket, (struct sockaddr*) &serverAddr, sizeof(serverAddr));
+	retval = connect(writeSocket, (struct sockaddr*) serverAddr->ai_addr, sizeof(struct sockaddr_in));
 	if(retval) { 
 		callError(ER_CONNECT);
 		return -1;
 	}
+
+	freeaddrinfo(serverAddr);
 
 	retval = pthread_attr_init(&readThreadAttr);
 	if(retval < 0) { 
