@@ -200,9 +200,9 @@ char *pipeMessage(char* packet, int *packetSize, int messageSize, int fd) {
 		return NULL;
 	}
 
-	memcpy(message, &(*packetSize), sizeof(int));
+	memcpy(message, packetSize, sizeof(int));
 	memcpy(&message[sizeof(int)], &fd, sizeof(int));
-	memcpy(&message[2*sizeof(int)], &packet, messageSize);
+	memcpy(&message[2*sizeof(int)], packet, messageSize);
 	return message;
 }
 

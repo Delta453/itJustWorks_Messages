@@ -33,9 +33,6 @@
 #include"message.h"
 #include"error.h"
 
-#define LISTENPORTNUM "50001" //the port number that the listen socket is gonna be connected to  default: "50001"
-#define CLIENTPORTNUM "50002" //the port number that the client listen socket is binded to default: "50002"
-
 int shutdownOrdered = 0; //used to tell when the user requested that the server is closed
 struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to be broadcasted
 
@@ -238,6 +235,7 @@ void client_threadFunction(clientSocket_t *client) {
 		}
 
 		username = breakMessage(fromClient, &type, NULL, NULL, NULL, sizeFromClient);
+		
 		if(username == NULL) { 
 			exit(-1);
 		}

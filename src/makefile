@@ -1,5 +1,5 @@
 BASIC_FLAGS = -Wall -g 
-EXTRA_FLAGS = 
+EXTRA_FLAGS = -fsanitize=address
 
 #object files used for both the executables
 OBJECTFILES = encryption.o error.o message.o

@@ -1,18 +1,18 @@
 #ifndef HSERVER
 #define HSERVER
 
-#define PORTNUM "50001"
 #define BACKLOGMAX 500 //sets the maximum request count on the listening thread
 //in microseconds, sets the time that threads sleep incase they are waiting
 //accept-thread: the time it waits in case the backlog is empty
 //flush-thread: the time it waits incase the out buffer is empty or the client list is empty
 #define WAITTIME 100000
+#define LISTENPORTNUM "50001" //the port number that the listen socket is gonna be connected to  default: "50001"
+#define CLIENTPORTNUM "50002" //the port number that the client listen socket is binded to default: "50002"
 
 //Constants used for CLI of the server
 #define CLI_BOOTUP "Server is being setted up, to close the program type 'q'"
 #define CLI_SETUPDONE "Server can now recieve requests from users"
 #define CLI_SHUTDOWN "Server has shut down"
-
 
 struct flaggedPipe { 
 	int used; //set to 1 if another thread is using it
