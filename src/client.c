@@ -20,9 +20,8 @@
 #include"message.h"
 #include"error.h"
 
-#define MAXSIZE 4000 //the maximum size the message can be in characters
-
-#define HOSTNAME "serverIJW.local" // the host name of the server
+#define MAXSIZE 4000 //the max size a single message can be (in characters)
+#define HOSTNAME "delta" // the host name of the server
 #define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
 #define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
 
@@ -376,7 +375,7 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	retval = pthread_create(&readThread, &readThreadAttr, (void*) &writeToSocket, (void*) &writeSocket);
+	retval = pthread_create(&readThread, &readThreadAttr, (void*) &writeToSocket, writeSocket);
 	if(retval < 0) { 
 		callError(ER_PCREATE);
 		return -1;

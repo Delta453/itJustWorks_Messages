@@ -45,7 +45,7 @@ int getListenSocket() {
 	struct addrinfo *address;
 	struct addrinfo getAddrHint;
 
-	fdToSocket = socket(AF_INET, SOCK_STREAM, 0);
+	fdToSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if(fdToSocket < 0) { 
 		perror("Listening socket failed: Socket failed");
 		return -1;
@@ -137,13 +137,14 @@ int acceptClients(int socketToCheck, node_t *list) {
 
 	newClient = accept4(socketToCheck, (struct sockaddr *) &clientAddr, &clientAddrSize, SOCK_NONBLOCK); 
 
-	if((newClient == EAGAIN) || (newClient == EWOULDBLOCK)) { //nothing in the backlog
-		return -1;
-	}
-
-	if((newClient < 0) || (clientAddr.sin_family != AF_INET)) { 
-		perror("Accept4 failed");
-		return -1;
+	if(newClient < 0) { 
+		if((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
+			return -1;
+		}
+		else { 
+			perror("Accept4 failed");
+			return -1;
+		}
 	}
 
 	//find the node the client is going to be saved
