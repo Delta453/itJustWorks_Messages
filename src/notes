@@ -1,7 +1,13 @@
 MAke a way for the cleint to quit and the server to understnad it. 
-Make a way for the client to udnerstnad if the sever closed for whatever reason
 
 For messages: They start with the size OF THE FOLLOWING Message
 example:  "5hello"
 
 Avachi is ur mdns resolver
+
+Notes: 
+
+So right no we are still working on the client message system. In the main thread of the clinet the 
+thread gets stuck on something and even tho quit is understood it doesnt close
+
+Also a thread is not being close/ gets stuck in the server meaning htat it never closes down

@@ -39,16 +39,8 @@ int writeToSocket(int writefd) {
 	int messageSize;
 	int messageToSendSize;
 	char *messageToSend; //stores the result of the create message function
-	char message[MAXSIZE]; //stores the input of the user
+	char message[MAXSIZE + 1]; //stores the input of the user
 	char username[21];
-	char scanfFormat[16]; 
-
-	retval = snprintf(scanfFormat, sizeof(scanfFormat), "%%%ds", MAXSIZE);
-	if(retval < 0) { 
-		perror("snprintf failed\n");
-		shutdownOrdered = 1;
-		return -1;
-	}
 
 	retval = printf("### System: insert your username (max 20 chars)\n"); //getting the username
 	if(retval < 0) { 
@@ -83,15 +75,54 @@ int writeToSocket(int writefd) {
 		return -1;
 	}
 
+	//manual for how to sent messages
+	retval = printf("### System: To sent messages type it out and press Ctrl + D at the end of it");
+	if(retval < 0) { 
+		shutdownOrdered = 1;
+		callError(ER_PRINTF);
+		return -1;
+	}
+
+	
+	retval = printf("\n(\\n if you want your message to change line)\n");
+	if(retval < 0) { 
+		shutdownOrdered = 1;
+		callError(ER_PRINTF);
+		return -1;
+	}
+
+	retval = printf("### System: Write !Quit when you want to quit\n");
+	if(retval < 0) { 
+		shutdownOrdered = 1;
+		callError(ER_PRINTF);
+		return -1;
+	}
+
+	retval = printf("### System: Messages come in the format of:\n");
+	if(retval < 0) { 
+		shutdownOrdered = 1;
+		callError(ER_PRINTF);
+		return -1;
+	}
+
+	retval = printf("[year/month/day hour/minutes/seconds] username: message\n");
+	if(retval < 0) { 
+		shutdownOrdered = 1;
+		callError(ER_PRINTF);
+		return -1;
+	}
+
 	while(1) { 
-		retval = scanf(scanfFormat, message);
-		if(retval == -1) { 
-			callError(ER_SCANF);
+		retval = read(STDIN_FILENO, message, MAXSIZE);
+		if(retval < 0) { 
 			shutdownOrdered = 1;
+			callError(ER_READ);
 			return -1;
 		}
 
-		if(!strncmp(message, "q", 2)) { //user asks to quit
+		message[retval] = '\0';
+
+		if(!strncmp(message, "!Quit", 6)) { //user asks to quit
 			shutdownOrdered = 1;
 			
 			//sending log out message
@@ -104,12 +135,14 @@ int writeToSocket(int writefd) {
 			retval = wwrite(writefd, (void*) &messageToSendSize, sizeof(messageToSendSize));
 			if(retval == -1) { 
 				shutdownOrdered = 1;
+				callError(ER_WRITE);
 				return -1;
 			}
 
 			retval = wwrite(writefd, messageToSend, messageToSendSize);
 			if(retval == -1) { 
 				shutdownOrdered = 1;
+				callError(ER_WRITE);
 				return -1;
 			}
 
@@ -138,6 +171,11 @@ int writeToSocket(int writefd) {
 		}
 
 		free(messageToSend);
+		retval = printf("### System: Message sent\n");
+		if(retval < 0) { 
+			callError(ER_PRINTF);
+			return -1;
+		}
 	}
 		
 	return 0;
@@ -327,12 +365,14 @@ int main(int argc, char *argv[]) {
  	retval = bind(findReadSocket, (struct sockaddr*) clientAddr->ai_addr, sizeof(struct sockaddr_in));
 	if(retval == -1) { 
 		callError(ER_BIND);
+		freeaddrinfo(clientAddr); 
 		return -1;
 	}
 
 	retval = listen(findReadSocket, 5);
 	if(retval < 0) { 
 		callError(ER_LISTEN);
+		freeaddrinfo(clientAddr); 
 		return -1;
 	}
 
@@ -347,23 +387,28 @@ int main(int argc, char *argv[]) {
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
+			freeaddrinfo(serverAddr);
 		}
 		else { 
 			perror("Getaddrinfo failed");
+			freeaddrinfo(serverAddr);
 		}
 
+		freeaddrinfo(serverAddr);
 		return -1;
 	}
 
 	writeSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if(writeSocket < 0) { 
 		callError(ER_SOCKET);
+		freeaddrinfo(serverAddr);
 		return -1;
 	}
 
 	retval = connect(writeSocket, (struct sockaddr*) serverAddr->ai_addr, sizeof(struct sockaddr_in));
 	if(retval) { 
 		callError(ER_CONNECT);
+		freeaddrinfo(serverAddr);
 		return -1;
 	}
 
