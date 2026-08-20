@@ -32,6 +32,9 @@
 #include"message.h"
 #include"error.h"
 
+#define LISTENPORTNUM "50001" //the port number that the listen socket is gonna be connected to  default: "50001"
+#define CLIENTPORTNUM "50002" //the port number that the client listen socket is binded to default: "50002"
+
 int shutdownOrdered = 0; //used to tell when the user requested that the server is closed
 struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to be broadcasted
 
@@ -53,7 +56,7 @@ int getListenSocket() {
 	getAddrHint.ai_socktype = SOCK_STREAM;
 	getAddrHint.ai_flags = AI_PASSIVE;
 
-	retval = getaddrinfo(NULL, PORTNUM, &getAddrHint, (struct addrinfo **) &address);
+	retval = getaddrinfo(NULL, LISTENPORTNUM, &getAddrHint, (struct addrinfo **) &address);
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "Listening socket failed: getaddrinfo failed: %s\n", gai_strerror(retval));
@@ -180,6 +183,7 @@ int acceptClients(int socketToCheck, node_t *list) {
 		exit(-1);
 	}
 
+	clientAddr.sin_port = atol(CLIENTPORTNUM);
 	if(connect(newNode->client.send, &clientAddr, sizeof(clientAddr))) { 
 		callError(ER_CONNECT);
 		exit(-1);

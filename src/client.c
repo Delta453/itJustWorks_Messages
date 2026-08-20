@@ -6,11 +6,13 @@
  * Returns: -1 in case of sys/call failure, 0 incase success
 */
 
+#define _GNU_SOURCE //defined for the use of accept4
+
 #include<stdio.h>
 #include<unistd.h>
 #include<stdlib.h>
 #include<string.h>
-#include<pthread.h>
+#include<pthread.h> 
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<netdb.h>
@@ -20,8 +22,9 @@
 
 #define MAXSIZE 4000 //the maximum size the message can be in characters
 
-#define HOSTNAME "serverpi" // the host name of the server
-#define PORTNUM "50001" //the port number used, default: 50001
+#define HOSTNAME "delta" // the host name of the server
+#define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
+#define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
 
 static int shutdownOrdered = 0; //used to signal the other thread to close, set to 1 to order the other to close
 
@@ -297,7 +300,7 @@ int main(int argc, char *argv[]) {
 	struct addrinfo serverAddrHint;
 	struct addrinfo acceptedAddr; // used to check the accepted socket is of the right type
 
-	findReadSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	findReadSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if(findReadSocket < 0) { 
 		callError(ER_SOCKET);
 		return -1;
@@ -309,7 +312,7 @@ int main(int argc, char *argv[]) {
 	clientAddrHint.ai_socktype = SOCK_STREAM;
 	clientAddrHint.ai_flags = AI_PASSIVE;
 
-	retval = getaddrinfo(NULL, PORTNUM, &clientAddrHint, (struct addrinfo**) &clientAddr);
+	retval = getaddrinfo(NULL, BINDPORTNUM, &clientAddrHint, (struct addrinfo**) &clientAddr);
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
@@ -327,6 +330,12 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+	retval = listen(findReadSocket, 5);
+	if(retval < 0) { 
+		callError(ER_LISTEN);
+		return -1;
+	}
+
 	freeaddrinfo(clientAddr); //listen socket is done
 
 	//getting the server address
@@ -334,7 +343,7 @@ int main(int argc, char *argv[]) {
 	serverAddrHint.ai_family = AF_INET;
 	serverAddrHint.ai_socktype = SOCK_STREAM;
 
- 	retval = getaddrinfo(HOSTNAME, PORTNUM, &serverAddrHint, (struct addrinfo**) &serverAddr);
+ 	retval = getaddrinfo(HOSTNAME, SERVERPORTNUM, &serverAddrHint, (struct addrinfo**) &serverAddr);
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
@@ -373,7 +382,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	do { //insure the readSocket is AF_INET type
-		readSocket = accept(findReadSocket, (struct sockaddr*) &acceptedAddr, NULL);
+		readSocket = accept4(findReadSocket, (struct sockaddr*) &acceptedAddr, NULL, SOCK_NONBLOCK);
 		if(readSocket < 0) { 
 			callError(ER_ACCEPT);
 			close(readSocket);

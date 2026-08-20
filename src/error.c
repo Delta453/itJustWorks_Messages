@@ -52,6 +52,10 @@ void callError(call_error_t error) {
 			perror("Bind failed");
 			break;
 		}
+		case ER_LISTEN: { 
+			perror("Listen failed");
+			break;
+		}
 		case ER_CONNECT: { 
 			perror("Connect failed");
 			break;
