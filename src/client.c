@@ -294,6 +294,7 @@ int main(int argc, char *argv[]) {
 	int findReadSocket = 0; // the read socket connects to this socket 
 	int readSocket = 0;
 	int writeSocket = 0; //fd's of the sockets connected to the server
+	socklen_t acceptedAddrLen;
 	struct addrinfo *clientAddr; // the address of the client/user to bind it to the findReadSocket
 	struct addrinfo clientAddrHint;
 	struct addrinfo *serverAddr; // the address of the server needed to connect to it
@@ -382,7 +383,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	do { //insure the readSocket is AF_INET type
-		readSocket = accept4(findReadSocket, (struct sockaddr*) &acceptedAddr, NULL, SOCK_NONBLOCK);
+		acceptedAddrLen = sizeof(struct sockaddr_in);
+		readSocket = accept4(findReadSocket, (struct sockaddr*) &acceptedAddr, &acceptedAddrLen, SOCK_NONBLOCK);
 		if(readSocket < 0) { 
 			callError(ER_ACCEPT);
 			close(readSocket);
@@ -393,7 +395,7 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 
-		if(acceptedAddr.ai_family == AF_INET) { 
+		if((acceptedAddrLen == sizeof(struct sockaddr_in)) && (acceptedAddr.ai_family == AF_INET)) { 
 			break;
 		}
 

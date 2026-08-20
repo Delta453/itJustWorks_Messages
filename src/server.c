@@ -126,18 +126,22 @@ void readForQuit() {
 
 int acceptClients(int socketToCheck, node_t *list) { 
 	struct sockaddr_in clientAddr;
+	socklen_t clientAddrSize;
 	node_t *prevNode, *newNode;
 	int newClient;
 	pthread_t clientThread;
 	pthread_attr_t attr;
 
-	newClient = accept4(socketToCheck, &clientAddr, NULL, SOCK_NONBLOCK); 
+	clientAddrSize = sizeof(clientAddr);
+
+	newClient = accept4(socketToCheck, (struct sockaddr *) &clientAddr, &clientAddrSize, SOCK_NONBLOCK); 
 
 	if((newClient == EAGAIN) || (newClient == EWOULDBLOCK)) { //nothing in the backlog
 		return -1;
 	}
 
 	if((newClient < 0) || (clientAddr.sin_family != AF_INET)) { 
+		perror("Accept4 failed");
 		return -1;
 	}
 
@@ -183,8 +187,8 @@ int acceptClients(int socketToCheck, node_t *list) {
 		exit(-1);
 	}
 
-	clientAddr.sin_port = atol(CLIENTPORTNUM);
-	if(connect(newNode->client.send, &clientAddr, sizeof(clientAddr))) { 
+	clientAddr.sin_port = htons(atol(CLIENTPORTNUM));
+	if(connect(newNode->client.send, (struct sockaddr*) &clientAddr, sizeof(clientAddr))) { 
 		callError(ER_CONNECT);
 		exit(-1);
 	}
