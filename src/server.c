@@ -2,7 +2,8 @@
  * from clients and then transmit them to all other clients currently connected. 
  *
  * Threads: 
- * client-thread: a thread that handles reading from the clients socket and sending it to the toSentBuffer
+ * client-thread: a thread that handles reading from the clients socket and sending it to the toSentBuffer as 
+ * well as giving notifications to STDOUT about user signing in and out
  * flush-thread: a thread that takes the contents of the toSentBuffer and then sents them to every user connected
  * user-thread: a thread that reads STDIN and waits for the user to type 'q' and when he does it orders the 
  * 		program to close
@@ -196,14 +197,15 @@ int acceptClients(int socketToCheck, node_t *list) {
 	return 0;
 }
 
-// Creates the send socket with the (*client) and after that handles the reading messages
-// from the recieve (*client) socket and saving them in the buffer when it is not being used by another flag
+//Reads the messanges sent and them writes them in the out pipe
 void client_threadFunction(clientSocket_t *client) { 
 	int sizeFromClient; //the size of the message coming from the (*client)
 	int retval;
 	int sizeToPipe;
 	char *toPipe; // where the message from the pipe message is stored to be written into the pipe
 	char *fromClient; //where the message from the (*client) is stored 
+	char *username; //where the username of the user is saved
+	packetType_t type; // where the type of messsage is saved, incase it is a login/out
 
 	while(1) { 
 		if(shutdownOrdered) { 
@@ -231,6 +233,38 @@ void client_threadFunction(clientSocket_t *client) {
 		retval = rread((*client).receive, fromClient, sizeFromClient);
 		if(retval < 0) { 
 			callError(ER_READ);
+			exit(-1);
+		}
+
+		username = breakMessage(fromClient, &type, NULL, NULL, NULL, sizeFromClient);
+		if(username == NULL) { 
+			exit(-1);
+		}
+
+		retval = printf("%s: ", username);
+		if(retval < 0) { 
+			callError(ER_PRINTF);
+			exit(-1);
+		}
+
+		switch(type) { 
+			case PAC_LOGIN: {
+				retval = printf("logged in\n");
+				break;
+			}
+			case PAC_ULOG: { 
+				retval = printf("logged out\n");
+				break;
+			}
+			default: { 
+				//exists to avoid warning
+			}
+		}
+
+		free(username);
+
+		if(retval < 0) { 
+			callError(ER_PRINTF);
 			exit(-1);
 		}
 

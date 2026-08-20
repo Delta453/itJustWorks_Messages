@@ -4,5 +4,4 @@ Make a way for the client to udnerstnad if the sever closed for whatever reason
 For messages: They start with the size OF THE FOLLOWING Message
 example:  "5hello"
 
-
-Its a race conditon. server is trying to connect whilts the other is trying to set up the listen. I guess
+Avachi is ur mdns resolver

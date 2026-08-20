@@ -22,7 +22,7 @@
 
 #define MAXSIZE 4000 //the maximum size the message can be in characters
 
-#define HOSTNAME "delta" // the host name of the server
+#define HOSTNAME "serverIJW.local" // the host name of the server
 #define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
 #define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
 

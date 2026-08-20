@@ -149,13 +149,16 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 	current = usernameSize + 1;
 
 	//getting the time
-	*time = malloc(sizeof(struct tm));
-	if(time == NULL) { 
-		callError(ER_MALLOC);
-		free(username);
-		return NULL;
+	if(time != NULL) { 
+		*time = malloc(sizeof(struct tm));
+		if(time == NULL) { 
+			callError(ER_MALLOC);
+			free(username);
+			return NULL;
+		}
+		readTime(&packet[current], *time);
 	}
-	readTime(&packet[current], *time);
+
 	current += 6*sizeof(int);
 
 	//getting the package type
@@ -166,6 +169,10 @@ char *upack(char* packet, packetType_t *type, char **message, unsigned int *mess
 	}
 
 	current += sizeof(packetType_t);
+
+	if(message == NULL) { 
+		return username;
+	}
 
 	//getting the message
 	memcpy(messageSize, &packet[current], sizeof(unsigned int));

@@ -35,7 +35,7 @@ extern char *createMessage(char *user, packetType_t type, char *containedMessage
  * type: where the type of the package is going to be stored
  * message: if the type is PAC_MESSAGE the message contained, else it can be set to NULL
  * messageSize: if the type is PAC_MESSAGE will contain the size of the message excluding the '\0'
- * time: the time of the OS at the time the message was created
+ * time: the time of the OS at the time the message was created, can be set to NULL
  * toBreakSize: the size of the encrypted message
  *
  * Returns: The username, NULL in case of failure*/
