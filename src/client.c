@@ -198,6 +198,10 @@ int printMessage(int readfd) {
 	unsigned int containedMessageSize; // if type PAC_MESSAGE the size of the message contained
 	
 	if(rread(readfd, &messageSize, sizeof(messageSize))) { 
+		if((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
+			return 0;
+		}
+
 		perror("rread failed");
 		return -1;
 	}
@@ -425,25 +429,16 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	do { //insure the readSocket is AF_INET type
-		acceptedAddrLen = sizeof(struct sockaddr_in);
-		readSocket = accept4(findReadSocket, (struct sockaddr*) &acceptedAddr, &acceptedAddrLen, SOCK_NONBLOCK);
-		if(readSocket < 0) { 
-			callError(ER_ACCEPT);
-			close(readSocket);
-			close(findReadSocket);
-			close(writeSocket);
-			shutdownOrdered = 1;
-			pthread_join(readThread, NULL);
-			return -1;
-		}
-
-		if((acceptedAddrLen == sizeof(struct sockaddr_in)) && (acceptedAddr.ai_family == AF_INET)) { 
-			break;
-		}
-
+	readSocket = accept4(findReadSocket, NULL, NULL, SOCK_NONBLOCK);
+	if(readSocket < 0) { 
+		callError(ER_ACCEPT);
 		close(readSocket);
-	} while(1);
+		close(findReadSocket);
+		close(writeSocket);
+		shutdownOrdered = 1;
+		pthread_join(readThread, NULL);
+		return -1;
+	}
 
 	close(findReadSocket);
 	retval = printConnection();
