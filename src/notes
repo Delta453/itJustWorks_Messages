@@ -11,3 +11,5 @@ we are still working on the client message system. In the main thread of the cli
 thread gets stuck on something and even tho quit is understood it doesnt close
 
 Also a thread is not being close/ gets stuck in the server meaning htat it never closes down
+
+setarch $(uname -m) -R ./server

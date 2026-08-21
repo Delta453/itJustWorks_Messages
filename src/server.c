@@ -168,6 +168,19 @@ int acceptClients(int socketToCheck) {
 	newNode->client.receive = newClient;
 	newNode->client.send = -1;
 
+	//creates the recieve socket
+	newNode->client.send = socket(AF_INET, SOCK_STREAM, 0);
+	if(newNode->client.send < 0) { 
+		callError(ER_SOCKET);
+		exit(-1);
+	}
+
+	clientAddr.sin_port = htons(atoi(CLIENTPORTNUM));
+	if(connect(newNode->client.send, (struct sockaddr*) &clientAddr, sizeof(clientAddr))) { 
+		callError(ER_CONNECT);
+		exit(-1);
+	}
+
 	if(pthread_attr_init(&attr)) { 
 		callError(ER_PATTRINIT);
 		exit(-1);
@@ -186,19 +199,6 @@ int acceptClients(int socketToCheck) {
 	if(pthread_attr_destroy(&attr)) { 
 			callError(ER_PATTRDE);
 			exit(-1);
-	}
-
-	//creates the recieve socket
-	newNode->client.send = socket(AF_INET, SOCK_STREAM, 0);
-	if(newNode->client.send < 0) { 
-		callError(ER_SOCKET);
-		exit(-1);
-	}
-
-	clientAddr.sin_port = htons(atoi(CLIENTPORTNUM));
-	if(connect(newNode->client.send, (struct sockaddr*) &clientAddr, sizeof(clientAddr))) { 
-		callError(ER_CONNECT);
-		exit(-1);
 	}
 
 	return 0;
@@ -359,6 +359,11 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 
 	if(clientList.head == NULL) { 
 		return 0;
+	}
+
+	while(clientList.removal) { 
+		usleep(WAITTIME);
+		continue;
 	}
 
 	for(curr = clientList.head; curr->next != NULL; curr = curr->next) { 

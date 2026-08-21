@@ -75,6 +75,8 @@ int writeToSocket(int writefd) {
 		return -1;
 	}
 
+	free(messageToSend);
+
 	//manual for how to sent messages
 	retval = printf("### System: To sent messages type it out and press Ctrl + D at the end of it");
 	if(retval < 0) { 
@@ -144,6 +146,7 @@ int writeToSocket(int writefd) {
 				return -1;
 			}
 
+			free(messageToSend);
 			break;
 		}
 
@@ -334,12 +337,10 @@ int main(int argc, char *argv[]) {
 	int findReadSocket = 0; // the read socket connects to this socket 
 	int readSocket = 0;
 	int writeSocket = 0; //fd's of the sockets connected to the server
-	socklen_t acceptedAddrLen;
 	struct addrinfo *clientAddr; // the address of the client/user to bind it to the findReadSocket
 	struct addrinfo clientAddrHint;
 	struct addrinfo *serverAddr; // the address of the server needed to connect to it
 	struct addrinfo serverAddrHint;
-	struct addrinfo acceptedAddr; // used to check the accepted socket is of the right type
 
 	findReadSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if(findReadSocket < 0) { 
