@@ -248,13 +248,13 @@ char *upipeMessage(int readFd, int *srcFd, int *packetSize) {
 		return NULL;
 	}
 
-	packet = malloc(messageSize - 2*sizeof(int));
+	packet = malloc(messageSize - 2*sizeof(int)); // - 2*sizeof(int)
 	if(packet == NULL) {
 		callError(ER_MALLOC);
 		return NULL;
 	}
 
-	if(rread(readFd, srcFd, sizeof(srcFd))) { 
+	if(rread(readFd, srcFd, sizeof(int))) { 
 		return NULL;
 	}
 

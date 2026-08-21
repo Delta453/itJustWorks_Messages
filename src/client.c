@@ -120,8 +120,6 @@ int writeToSocket(int writefd) {
 			return -1;
 		}
 
-		message[retval] = '\0';
-
 		if(!strncmp(message, "!Quit", 5)) { //user asks to quit
 			shutdownOrdered = 1;
 			
@@ -178,6 +176,7 @@ int writeToSocket(int writefd) {
 		}
 	}
 		
+	close(writefd);
 	return 0;
 }
 
@@ -475,6 +474,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	close(readSocket);
-	close(writeSocket);
 	return threadRetval; 
 }

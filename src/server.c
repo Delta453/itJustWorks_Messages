@@ -195,7 +195,7 @@ int acceptClients(int socketToCheck) {
 		exit(-1);
 	}
 
-	clientAddr.sin_port = htons(atol(CLIENTPORTNUM));
+	clientAddr.sin_port = htons(atoi(CLIENTPORTNUM));
 	if(connect(newNode->client.send, (struct sockaddr*) &clientAddr, sizeof(clientAddr))) { 
 		callError(ER_CONNECT);
 		exit(-1);
@@ -312,6 +312,9 @@ void client_threadFunction(node_t *clientNode) {
 	if(clientNode != clientList.head) { 
 		clientNode->prev->next = clientNode->next;
 	}
+	else {
+		clientList.head = NULL;
+	}
 
 	if(clientNode->next != NULL) {
 		clientNode->next->prev = clientNode->prev;
@@ -321,6 +324,7 @@ void client_threadFunction(node_t *clientNode) {
 	close(client.receive);
 	free(clientNode);
 	clientList.removal = 0;
+	fflush(stdout); //reduntant but it insures the disconnect message flushes
 	return;
 }
 
@@ -352,6 +356,10 @@ int setFlushThread() {
 int publishMessage(int skipFd, char *message, int messageSize) {
 	node_t *curr;
 	int retval;
+
+	if(clientList.head == NULL) { 
+		return 0;
+	}
 
 	for(curr = clientList.head; curr->next != NULL; curr = curr->next) { 
 		if(curr->client.receive == skipFd) {
@@ -431,8 +439,9 @@ void freeList(node_t *head) {
 }
 
 int main(int argc, char* argv[]) {
-	struct flaggedPipe toSendBuffer;
 	int listeningSocket;
+
+	clientList.removal = 0;
 
 	listeningSocket = getListenSocket();
 	if(listeningSocket == -1) {
@@ -443,13 +452,13 @@ int main(int argc, char* argv[]) {
 		callError(ER_PRINTF);
 	}
 
-	if(setInputThread()) { 
-		return -1;
-	}
-
 	toSendBuffer.used = 0;
 	if(pipe2(toSendBuffer.pipefd, O_NONBLOCK)) { 
 		callError(ER_PIPE);
+		return -1;
+	}
+
+	if(setInputThread()) { 
 		return -1;
 	}
 

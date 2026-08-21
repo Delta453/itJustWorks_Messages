@@ -81,7 +81,7 @@ extern char *pipeMessage(char *packet, int *packetSize, int messageSize, int fd)
 /* Description: Reads from the fd a message made by the pipeMessage function. The unpacks it
  *
  * Parameters: 
- * 	readFd: the fd that this fucntion is going to read from
+ * 	readFd: the fd that this function is going to read from
  * 	srcFd: the fd that points to the socket that the message came from
  * 	packetSize: where the size of the packet contained within the message is stored
  *
