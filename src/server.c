@@ -35,6 +35,7 @@
 
 int shutdownOrdered = 0; //used to tell when the user requested that the server is closed
 struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to be broadcasted
+struct flaggedList clientList;
 
 int getListenSocket() { 
 	int retval;
@@ -63,6 +64,7 @@ int getListenSocket() {
 			perror("Listening socket failed: Getaddrinfo failed");
 		}
 
+		freeaddrinfo(address);
 		return -1;
 	}
 
@@ -122,7 +124,7 @@ void readForQuit() {
 	pthread_exit(0);
 }
 
-int acceptClients(int socketToCheck, node_t *list) { 
+int acceptClients(int socketToCheck) { 
 	struct sockaddr_in clientAddr;
 	socklen_t clientAddrSize;
 	node_t *prevNode, *newNode;
@@ -147,12 +149,19 @@ int acceptClients(int socketToCheck, node_t *list) {
 	//find the node the client is going to be saved
 	newNode = malloc(sizeof(node_t));
 
-	if(list == NULL) { 
-		list = newNode;
+	if(clientList.head == NULL) { 
+		clientList.head = newNode;
+		newNode->prev = NULL;
 	}
 	else { 
-		for(prevNode = list; prevNode->next != NULL; prevNode = prevNode->next);//get the curr to the prev
+		//waits for the removal to finish to avoid connecting the new node to the deleted one
+		while(clientList.removal) {
+			usleep(WAITTIME);
+		}
+
+		for(prevNode = clientList.head; prevNode->next != NULL; prevNode = prevNode->next);//get the curr to the prev
 		prevNode->next = newNode;
+		prevNode->prev = prevNode;
 	}
 
 	newNode->next = NULL;
@@ -164,7 +173,7 @@ int acceptClients(int socketToCheck, node_t *list) {
 		exit(-1);
 	}
 
-	if(pthread_create(&clientThread, &attr, (void*) &client_threadFunction, &newNode->client)) {
+	if(pthread_create(&clientThread, &attr, (void*) &client_threadFunction, (void*) newNode)) {
 		callError(ER_PCREATE);
 		exit(-1);
 	}
@@ -196,21 +205,23 @@ int acceptClients(int socketToCheck, node_t *list) {
 }
 
 //Reads the messanges sent and them writes them in the out pipe
-void client_threadFunction(clientSocket_t *client) { 
+void client_threadFunction(node_t *clientNode) { 
 	int sizeFromClient; //the size of the message coming from the (*client)
 	int retval;
 	int sizeToPipe;
+	int clientDisconnected = 0; //set to 1 when the user send's a PAC_ULOG message type
 	char *toPipe; // where the message from the pipe message is stored to be written into the pipe
 	char *fromClient; //where the message from the (*client) is stored 
 	char *username; //where the username of the user is saved
 	packetType_t type; // where the type of messsage is saved, incase it is a login/out
+	clientSocket_t client = clientNode->client; //done for readability
 
 	while(1) { 
 		if(shutdownOrdered) { 
 			break;
 		}
 
-		retval = rread((*client).receive, &sizeFromClient, sizeof(sizeFromClient));
+		retval = rread(client.receive, &sizeFromClient, sizeof(sizeFromClient));
 		if(retval < 0) { 
 			if((errno != EAGAIN) && (errno != EWOULDBLOCK)) { 
 				callError(ER_READ);
@@ -228,7 +239,7 @@ void client_threadFunction(clientSocket_t *client) {
 			exit(-1);
 		}
 
-		retval = rread((*client).receive, fromClient, sizeFromClient);
+		retval = rread(client.receive, fromClient, sizeFromClient);
 		if(retval < 0) { 
 			callError(ER_READ);
 			exit(-1);
@@ -253,6 +264,7 @@ void client_threadFunction(clientSocket_t *client) {
 			}
 			case PAC_ULOG: { 
 				retval = printf("logged out\n");
+				clientDisconnected = 1;
 				break;
 			}
 			default: { 
@@ -267,7 +279,7 @@ void client_threadFunction(clientSocket_t *client) {
 			exit(-1);
 		}
 
-		toPipe = pipeMessage(fromClient, &sizeToPipe, sizeFromClient, (*client).receive);
+		toPipe = pipeMessage(fromClient, &sizeToPipe, sizeFromClient, client.receive);
 		free(fromClient);
 		while(1) { //wait to write message into the toSend pipe 
 			if(toSendBuffer.used) { 
@@ -282,13 +294,33 @@ void client_threadFunction(clientSocket_t *client) {
 				exit(-1);
 			}
 
+			toSendBuffer.used = 0;
 			free(toPipe);
+			break;
+		}
+
+		if(clientDisconnected) { 
 			break;
 		}
 	}
 
-	close((*client).receive);
-	close((*client).send);
+	while(clientList.removal) { 
+		usleep(WAITTIME);
+	}
+
+	clientList.removal = 1;
+	if(clientNode != clientList.head) { 
+		clientNode->prev->next = clientNode->next;
+	}
+
+	if(clientNode->next != NULL) {
+		clientNode->next->prev = clientNode->prev;
+	}
+
+	close(client.send);
+	close(client.receive);
+	free(clientNode);
+	clientList.removal = 0;
 	return;
 }
 
@@ -317,11 +349,11 @@ int setFlushThread() {
 
 // Writes the mesage to all the snd sockets of all the clients in the list expept for the skipFd
 // skipFd can be left negative incase, in that case no client will be skipped
-int publishMessage(node_t *list, int skipFd, char *message, int messageSize) {
+int publishMessage(int skipFd, char *message, int messageSize) {
 	node_t *curr;
 	int retval;
 
-	for(curr = list; curr->next != NULL; curr = curr->next) { 
+	for(curr = clientList.head; curr->next != NULL; curr = curr->next) { 
 		if(curr->client.receive == skipFd) {
 			continue;
 		}
@@ -346,7 +378,7 @@ int publishMessage(node_t *list, int skipFd, char *message, int messageSize) {
 
 // Constantly checks the toSentBuffer and then sents out the message contained 
 // in it to all the clients except for the one that sent it
-void flush_threadFunction(node_t **list) { 
+void flush_threadFunction() { 
 	char *buffer;
 	int socketFd;
 	int retval; 
@@ -357,7 +389,12 @@ void flush_threadFunction(node_t **list) {
 			break;
 		}
 
-		if(list == NULL) { 
+		if(clientList.head == NULL) { 
+			usleep(WAITTIME);
+			continue;
+		}
+
+		if(clientList.removal) { 
 			usleep(WAITTIME);
 			continue;
 		}
@@ -373,7 +410,7 @@ void flush_threadFunction(node_t **list) {
 			usleep(WAITTIME);
 		}
 
-		retval = publishMessage(*list, socketFd, buffer, bufferSize);
+		retval = publishMessage(socketFd, buffer, bufferSize);
 		free(buffer);
 		if(retval == -1) { 
 			close(toSendBuffer.pipefd[0]);
@@ -395,7 +432,6 @@ void freeList(node_t *head) {
 
 int main(int argc, char* argv[]) {
 	struct flaggedPipe toSendBuffer;
-	node_t *clientList = NULL;
 	int listeningSocket;
 
 	listeningSocket = getListenSocket();
@@ -430,12 +466,12 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 
-		if(acceptClients(listeningSocket, clientList)) {
+		if(acceptClients(listeningSocket)) {
 			usleep(WAITTIME); //causes latency on connection but saves resources
 		}
 	}
 
-	freeList(clientList);
+	freeList(clientList.head);
 	
 	if(printf("%s\n", CLI_SHUTDOWN) < 0) { 
 		perror("Shutdown message failed to deliver");

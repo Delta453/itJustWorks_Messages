@@ -26,8 +26,14 @@ typedef struct { //the first socket connection to the client is the receive
 
 typedef struct node { 
 	struct node *next;
+	struct node *prev;
 	clientSocket_t client;
 } node_t;
+
+struct flaggedList {
+	int removal; //set to 1 when a thread is deleting a client from
+	node_t *head;
+};
 
 /* Returns the fd to a  socket that is in listening mode, -1 incase of failure*/
 extern int getListenSocket();
@@ -43,22 +49,22 @@ extern void readForQuit();
 
 /* Checks if the listening socket has a socket waiting and if it does it creates the cleint-thread for it
  * Returns: 1 incase the backlog is empty, 0 in other cases*/
-extern int acceptClients(int socketToCheck, node_t *list);
+extern int acceptClients(int socketToCheck);
 
 /*This is the function for the flush-thread. Its takes input from the toSend pipe, stores it in 
  * a heap buffer and then sends it out to all user's except the one that sent it.*/
-extern void sendToClients(node_t **list);
+extern void sendToClients();
 
 /* Frees the list of clients. The ptr given, after the function points to invalid memory*/
 extern void freeList(node_t *head);
 
 /* Description: The function for the client_thread
  * Parameters: a ptr to the client node that the thread is responsible for*/
-extern void client_threadFunction(clientSocket_t *client);
+extern void client_threadFunction(node_t *clientNode);
 
 /*Description: The function for the flush_thread
  * Parameter: a ptr to the head of the list of client*/
-extern void flush_threadFunction(node_t **list);
+extern void flush_threadFunction();
 
 //to add: 
 //all the thread fucntions, 

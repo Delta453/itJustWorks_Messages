@@ -122,11 +122,11 @@ int writeToSocket(int writefd) {
 
 		message[retval] = '\0';
 
-		if(!strncmp(message, "!Quit", 6)) { //user asks to quit
+		if(!strncmp(message, "!Quit", 5)) { //user asks to quit
 			shutdownOrdered = 1;
 			
 			//sending log out message
-			messageToSend = createMessage(username, PAC_LOGIN, NULL, &messageToSendSize); //sending the login request
+			messageToSend = createMessage(username, PAC_ULOG, NULL, &messageToSendSize); //sending the login request
 			if(messageToSend == NULL) { 
 				shutdownOrdered = 1;
 				return -1;
