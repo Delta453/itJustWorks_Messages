@@ -149,19 +149,25 @@ int acceptClients(int socketToCheck) {
 	//find the node the client is going to be saved
 	newNode = malloc(sizeof(node_t));
 
+	if(pthread_mutex_lock(&clientList.removal)) { 
+		callError(ER_MUTLOC);
+		exit(-1);
+	}
+
+
 	if(clientList.head == NULL) { 
 		clientList.head = newNode;
 		newNode->prev = NULL;
 	}
 	else { 
-		//waits for the removal to finish to avoid connecting the new node to the deleted one
-		while(clientList.removal) {
-			usleep(WAITTIME);
-		}
-
 		for(prevNode = clientList.head; prevNode->next != NULL; prevNode = prevNode->next);//get the curr to the prev
 		prevNode->next = newNode;
 		prevNode->prev = prevNode;
+	}
+
+	if(pthread_mutex_unlock(&clientList.removal)) { 
+		callError(ER_MUTULOC);
+		exit(-1);
 	}
 
 	newNode->next = NULL;
@@ -282,19 +288,24 @@ void client_threadFunction(node_t *clientNode) {
 		toPipe = pipeMessage(fromClient, &sizeToPipe, sizeFromClient, client.receive);
 		free(fromClient);
 		while(1) { //wait to write message into the toSend pipe 
-			if(toSendBuffer.used) { 
-				usleep(WAITTIME);
-				continue;
+			if(pthread_mutex_lock(&toSendBuffer.used)) { 
+				callError(ER_MUTLOC);
+				free(toPipe);
+				exit(-1);
 			}
 
-			toSendBuffer.used = 1;
 			retval = wwrite(toSendBuffer.pipefd[1], toPipe, sizeToPipe);
 			if(retval < 0) { 
 				callError(ER_WRITE);
 				exit(-1);
 			}
 
-			toSendBuffer.used = 0;
+			if(pthread_mutex_unlock(&toSendBuffer.used)) { 
+				callError(ER_MUTULOC);
+				free(toPipe);
+				exit(-1);
+			}
+
 			free(toPipe);
 			break;
 		}
@@ -304,11 +315,11 @@ void client_threadFunction(node_t *clientNode) {
 		}
 	}
 
-	while(clientList.removal) { 
-		usleep(WAITTIME);
+	if(pthread_mutex_lock(&clientList.removal)) { 
+		callError(ER_MUTLOC);
+		exit(-1);
 	}
 
-	clientList.removal = 1;
 	if(clientNode != clientList.head) { 
 		clientNode->prev->next = clientNode->next;
 	}
@@ -323,7 +334,11 @@ void client_threadFunction(node_t *clientNode) {
 	close(client.send);
 	close(client.receive);
 	free(clientNode);
-	clientList.removal = 0;
+	if(pthread_mutex_unlock(&clientList.removal)) { 
+		callError(ER_MUTULOC);
+		exit(-1);
+	}
+
 	fflush(stdout); //reduntant but it insures the disconnect message flushes
 	return;
 }
@@ -361,9 +376,9 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 		return 0;
 	}
 
-	while(clientList.removal) { 
-		usleep(WAITTIME);
-		continue;
+	if(pthread_mutex_lock(&clientList.removal)) { 
+		callError(ER_MUTLOC);
+		return -1;
 	}
 
 	for(curr = clientList.head; curr->next != NULL; curr = curr->next) { 
@@ -384,6 +399,11 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 		if(retval == -1) { 
 			return -1;
 		}
+	}
+
+	if(pthread_mutex_unlock(&clientList.removal)) { 
+		callError(ER_MUTULOC);
+		return -1;
 	}
 
 	return 0;
@@ -407,11 +427,6 @@ void flush_threadFunction() {
 			continue;
 		}
 
-		if(clientList.removal) { 
-			usleep(WAITTIME);
-			continue;
-		}
-
 		buffer = upipeMessage(toSendBuffer.pipefd[0], &socketFd, &bufferSize);
 		if(buffer == NULL) { 
 			if((errno != EAGAIN) && (errno != EWOULDBLOCK)) { 
@@ -421,6 +436,7 @@ void flush_threadFunction() {
 			
 			//pipe is empty
 			usleep(WAITTIME);
+			continue;
 		}
 
 		retval = publishMessage(socketFd, buffer, bufferSize);
@@ -446,8 +462,6 @@ void freeList(node_t *head) {
 int main(int argc, char* argv[]) {
 	int listeningSocket;
 
-	clientList.removal = 0;
-
 	listeningSocket = getListenSocket();
 	if(listeningSocket == -1) {
 		return -1;
@@ -457,7 +471,6 @@ int main(int argc, char* argv[]) {
 		callError(ER_PRINTF);
 	}
 
-	toSendBuffer.used = 0;
 	if(pipe2(toSendBuffer.pipefd, O_NONBLOCK)) { 
 		callError(ER_PIPE);
 		return -1;

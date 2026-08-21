@@ -1,6 +1,8 @@
 #ifndef HSERVER
 #define HSERVER
 
+#include<pthread.h>
+
 #define BACKLOGMAX 500 //sets the maximum request count on the listening thread
 //in microseconds, sets the time that threads sleep incase they are waiting
 //accept-thread: the time it waits in case the backlog is empty
@@ -15,7 +17,7 @@
 #define CLI_SHUTDOWN "Server has shut down"
 
 struct flaggedPipe { 
-	int used; //set to 1 if another thread is using it
+	pthread_mutex_t used; //locked when any thread is using the pipes
 	int pipefd[2];
 };
 
@@ -31,7 +33,7 @@ typedef struct node {
 } node_t;
 
 struct flaggedList {
-	int removal; //set to 1 when a thread is deleting a client from
+	pthread_mutex_t removal; //locked when any thread is using the list
 	node_t *head;
 };
 

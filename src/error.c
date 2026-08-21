@@ -84,6 +84,14 @@ void callError(call_error_t error) {
 			perror("pthread_detach failed");
 			break;
 	  }
+		case ER_MUTLOC: { 
+			perror("pthread_mutox_lock failed");
+			break;
+		}
+		case ER_MUTULOC: { 
+			perror("pthread_mutox_unlock failed");
+			break;
+		}
 		default: { 
 			//empty for warning
 		}

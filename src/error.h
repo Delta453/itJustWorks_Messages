@@ -21,7 +21,9 @@ typedef enum{
 	ER_PJOIN,
 	ER_PATTRINIT,
 	ER_PATTRDE,
-	ER_PDETACH
+	ER_PDETACH,
+	ER_MUTLOC,
+	ER_MUTULOC
 } call_error_t;
 
 /* calls perror and gives it the valid str for the error
