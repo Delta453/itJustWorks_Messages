@@ -24,6 +24,7 @@
 #define HOSTNAME "delta" // the host name of the server
 #define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
 #define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
+#define WAITTIME 100000 //the time in microseconds the program sleeps if readSocket was empty on read
 
 static int shutdownOrdered = 0; //used to signal the other thread to close, set to 1 to order the other to close
 
@@ -34,7 +35,8 @@ static int shutdownOrdered = 0; //used to signal the other thread to close, set 
  * 	writefd: the fd where the message is written
  *
  * Returns: -1 on sys call failure, 0 on success*/
-int writeToSocket(int writefd) { 
+int writeToSocket(int *ptrWritefd) { 
+	int writefd = *ptrWritefd; //used to avoid an error on rasberry pi's
 	int retval;
 	int messageSize;
 	int messageToSendSize;
@@ -148,14 +150,6 @@ int writeToSocket(int writefd) {
 
 			free(messageToSend);
 			break;
-		}
-
-		messageSize = retval;
-		retval = wwrite(writefd, (void*) &messageSize, sizeof(messageSize));
-		if(retval == -1) { 
-			callError(ER_WRITE);
-			shutdownOrdered = 1;
-			return -1;
 		}
 
 		messageToSend = createMessage(username, PAC_MESSAGE, message, &messageToSendSize);
@@ -318,12 +312,6 @@ int printConnection() { //prints a notification to STDOUT that connection to ser
 		return -1;
 	}
 
-	retval = printf("### System: Type 'q' to close the program");
-	if(retval < 0) { 
-		callError(ER_PRINTF);
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -363,6 +351,7 @@ int main(int argc, char *argv[]) {
 			perror("Getaddrinfo failed");
 		}
 
+		freeaddrinfo(clientAddr);
 		return -1;
 	}
 
@@ -391,11 +380,9 @@ int main(int argc, char *argv[]) {
 	if(retval) { 
 		if(retval != EAI_SYSTEM) { 
 			fprintf(stderr, "getaddrinfo failed: %s\n", gai_strerror(retval));
-			freeaddrinfo(serverAddr);
 		}
 		else { 
 			perror("Getaddrinfo failed");
-			freeaddrinfo(serverAddr);
 		}
 
 		freeaddrinfo(serverAddr);
@@ -424,7 +411,7 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	retval = pthread_create(&readThread, &readThreadAttr, (void*) &writeToSocket, writeSocket);
+	retval = pthread_create(&readThread, &readThreadAttr, (void*) &writeToSocket, (void*) &writeSocket);
 	if(retval < 0) { 
 		callError(ER_PCREATE);
 		return -1;
@@ -459,12 +446,14 @@ int main(int argc, char *argv[]) {
 				return -1;
 			}
 		}
+		else { 
+			usleep(WAITTIME);
+		}
 
 		if(shutdownOrdered) { 
 			if(pthread_join(readThread, (void**) &threadRetval)) { 
 				callError(ER_PJOIN);
 			}
-
 			break;
 		}
 	}

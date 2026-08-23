@@ -154,7 +154,6 @@ int acceptClients(int socketToCheck) {
 		exit(-1);
 	}
 
-
 	if(clientList.head == NULL) { 
 		clientList.head = newNode;
 		newNode->prev = NULL;
@@ -172,7 +171,6 @@ int acceptClients(int socketToCheck) {
 
 	newNode->next = NULL;
 	newNode->client.receive = newClient;
-	newNode->client.send = -1;
 
 	//creates the recieve socket
 	newNode->client.send = socket(AF_INET, SOCK_STREAM, 0);
@@ -227,7 +225,7 @@ void client_threadFunction(node_t *clientNode) {
 			break;
 		}
 
-		retval = rread(client.receive, &sizeFromClient, sizeof(sizeFromClient));
+		retval = rread(client.receive, &sizeFromClient, sizeof(int));
 		if(retval < 0) { 
 			if((errno != EAGAIN) && (errno != EWOULDBLOCK)) { 
 				callError(ER_READ);
@@ -392,11 +390,18 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 
 		retval = wwrite(curr->client.send, message, messageSize);
 		if(retval == -1) { 
+			if(pthread_mutex_unlock(&clientList.removal)) { 
+				callError(ER_MUTULOC);
+			}
 			return -1;
 		}
 
 		retval = wwrite(curr->client.send, message, messageSize);
 		if(retval == -1) { 
+			if(pthread_mutex_unlock(&clientList.removal)) { 
+				callError(ER_MUTULOC);
+			}
+
 			return -1;
 		}
 	}
@@ -417,14 +422,17 @@ void flush_threadFunction() {
 	int retval; 
 	int bufferSize;
 
-	while(1) { 
+	while(clientList.head == NULL) { //waits for the list to be created
 		if(shutdownOrdered) { 
 			break;
 		}
 
-		if(clientList.head == NULL) { 
-			usleep(WAITTIME);
-			continue;
+		usleep(WAITTIME);
+	}
+
+	while(1) { 
+		if(shutdownOrdered) { 
+			break;
 		}
 
 		buffer = upipeMessage(toSendBuffer.pipefd[0], &socketFd, &bufferSize);

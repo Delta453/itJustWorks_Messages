@@ -213,7 +213,7 @@ int rread(int fd, void *dst, int size) {
 	int count = 0;
 
 	do { 
-		retval = read(fd, dst, size);
+		retval = read(fd, &dst[count], size - count);
 		if(retval < 0) { 
 			return -1;
 		}
@@ -229,7 +229,7 @@ int wwrite(int fd, char*src, int size) {
 	int count = 0;
 
 	do { 
-		retval = write(fd, src, size);
+		retval = write(fd, &src[count], size - count);
 		if(retval < 0) { 
 			return -1;
 		}
