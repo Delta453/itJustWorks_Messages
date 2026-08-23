@@ -246,10 +246,12 @@ void client_threadFunction(node_t *clientNode) {
 			exit(-1);
 		}
 
-		retval = rread(client.receive, fromClient, sizeFromClient);
-		if(retval < 0) { 
-			callError(ER_READ);
-			exit(-1);
+		while((retval = rread(client.receive, fromClient, sizeFromClient)) < 0) {
+    	if((errno != EAGAIN) && (errno != EWOULDBLOCK)) { 
+        callError(ER_READ);
+        exit(-1);
+    	}
+    	usleep(WAITTIME);
 		}
 
 		username = breakMessage(fromClient, &type, NULL, NULL, NULL, sizeFromClient);

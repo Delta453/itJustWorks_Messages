@@ -21,7 +21,7 @@
 #include"error.h"
 
 #define MAXSIZE 4000 //the max size a single message can be (in characters)
-#define HOSTNAME "serverIJW.home" // the host name of the server
+#define HOSTNAME "delta" // the host name of the server
 #define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
 #define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
 #define WAITTIME 100000 //the time in microseconds the program sleeps if readSocket was empty on read
@@ -38,7 +38,6 @@ static int shutdownOrdered = 0; //used to signal the other thread to close, set 
 int writeToSocket(int *ptrWritefd) { 
 	int writefd = *ptrWritefd; //used to avoid an error on rasberry pi's
 	int retval;
-	int messageSize;
 	int messageToSendSize;
 	char *messageToSend; //stores the result of the create message function
 	char message[MAXSIZE + 1]; //stores the input of the user
@@ -216,10 +215,12 @@ int printMessage(int readfd) {
 	 return -1;
 	}
 
-	retval = rread(readfd, message, messageSize);
-	if(retval < 0) {
-		perror("rread failed");
-		return -1;
+	while(rread(readfd, message, messageSize) < 0) {
+   	if((errno != EAGAIN) && (errno != EWOULDBLOCK)) { 
+    	perror("rread failed");
+  	 	free(message);
+    }
+    usleep(WAITTIME);
 	}
 
 	username = breakMessage(message, &type, &containedMessage, &containedMessageSize, &time, messageSize);
