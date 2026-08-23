@@ -154,14 +154,17 @@ int acceptClients(int socketToCheck) {
 		exit(-1);
 	}
 
+	newNode->prev = NULL;
+	newNode->next = NULL;
+	newNode->client.receive = newClient;
+
 	if(clientList.head == NULL) { 
 		clientList.head = newNode;
-		newNode->prev = NULL;
 	}
 	else { 
-		for(prevNode = clientList.head; prevNode->next != NULL; prevNode = prevNode->next);//get the curr to the prev
+		for(prevNode = clientList.head; prevNode->next != NULL; prevNode = prevNode->next);
 		prevNode->next = newNode;
-		prevNode->prev = prevNode;
+		newNode->prev = prevNode;
 	}
 
 	if(pthread_mutex_unlock(&clientList.removal)) { 
@@ -255,10 +258,12 @@ void client_threadFunction(node_t *clientNode) {
 			exit(-1);
 		}
 
-		retval = printf("%s: ", username);
-		if(retval < 0) { 
-			callError(ER_PRINTF);
-			exit(-1);
+		if(type != PAC_MESSAGE) { 
+			retval = printf("%s: ", username);
+			if(retval < 0) { 
+				callError(ER_PRINTF);
+				exit(-1);
+			}
 		}
 
 		switch(type) { 
@@ -285,29 +290,25 @@ void client_threadFunction(node_t *clientNode) {
 
 		toPipe = pipeMessage(fromClient, &sizeToPipe, sizeFromClient, client.receive);
 		free(fromClient);
-		while(1) { //wait to write message into the toSend pipe 
-			if(pthread_mutex_lock(&toSendBuffer.used)) { 
-				callError(ER_MUTLOC);
-				free(toPipe);
-				exit(-1);
-			}
-
-			retval = wwrite(toSendBuffer.pipefd[1], toPipe, sizeToPipe);
-			if(retval < 0) { 
-				callError(ER_WRITE);
-				exit(-1);
-			}
-
-			if(pthread_mutex_unlock(&toSendBuffer.used)) { 
-				callError(ER_MUTULOC);
-				free(toPipe);
-				exit(-1);
-			}
-
+		if(pthread_mutex_lock(&toSendBuffer.used)) { 
+			callError(ER_MUTLOC);
 			free(toPipe);
-			break;
+			exit(-1);
 		}
 
+		retval = wwrite(toSendBuffer.pipefd[1], toPipe, sizeToPipe);
+		if(retval < 0) { 
+			callError(ER_WRITE);
+			exit(-1);
+		}
+
+		if(pthread_mutex_unlock(&toSendBuffer.used)) { 
+			callError(ER_MUTULOC);
+			free(toPipe);
+			exit(-1);
+		}
+
+		free(toPipe);
 		if(clientDisconnected) { 
 			break;
 		}
@@ -318,15 +319,16 @@ void client_threadFunction(node_t *clientNode) {
 		exit(-1);
 	}
 
-	if(clientNode != clientList.head) { 
-		clientNode->prev->next = clientNode->next;
-	}
-	else {
-		clientList.head = NULL;
+	if(clientNode == clientList.head) { 
+		clientList.head = clientNode->next;
 	}
 
-	if(clientNode->next != NULL) {
+	if(clientNode->next != NULL) { 
 		clientNode->next->prev = clientNode->prev;
+	}
+
+	if(clientNode->prev != NULL) { 
+		clientNode->prev->next = clientNode->next;
 	}
 
 	close(client.send);
@@ -379,7 +381,7 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 		return -1;
 	}
 
-	for(curr = clientList.head; curr->next != NULL; curr = curr->next) { 
+	for(curr = clientList.head; curr != NULL; curr = curr->next) { 
 		if(curr->client.receive == skipFd) {
 			continue;
 		}
@@ -388,7 +390,7 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 			continue; 
 		}
 
-		retval = wwrite(curr->client.send, message, messageSize);
+		retval = wwrite(curr->client.send, (char*) &messageSize, sizeof(int));
 		if(retval == -1) { 
 			if(pthread_mutex_unlock(&clientList.removal)) { 
 				callError(ER_MUTULOC);

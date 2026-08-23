@@ -21,7 +21,7 @@
 #include"error.h"
 
 #define MAXSIZE 4000 //the max size a single message can be (in characters)
-#define HOSTNAME "delta" // the host name of the server
+#define HOSTNAME "serverIJW.home" // the host name of the server
 #define BINDPORTNUM "50002" //the port number used by the client to bind his listen socket, default: 50002
 #define SERVERPORTNUM "50001" //the port number used by the listen socket of the server, default: 50001
 #define WAITTIME 100000 //the time in microseconds the program sleeps if readSocket was empty on read
@@ -194,17 +194,14 @@ int printMessage(int readfd) {
 	unsigned int messageSize; //the size of the message read
 	unsigned int containedMessageSize; // if type PAC_MESSAGE the size of the message contained
 	
-	if(rread(readfd, &messageSize, sizeof(messageSize))) { 
+	retval = rread(readfd, &messageSize, sizeof(messageSize));
+	if(retval < 0) { 
 		if((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
 			return 0;
 		}
 
 		perror("rread failed");
 		return -1;
-	}
-
-	if((errno == EWOULDBLOCK) || (errno == EAGAIN)) { 
-		return 0;
 	}
 
 	if(messageSize < 0) { 
@@ -219,7 +216,8 @@ int printMessage(int readfd) {
 	 return -1;
 	}
 
-	if(rread(readfd, message, messageSize)) { 
+	retval = rread(readfd, message, messageSize);
+	if(retval < 0) {
 		perror("rread failed");
 		return -1;
 	}
@@ -248,15 +246,16 @@ int printMessage(int readfd) {
 
 	if(retval == -1) {
 		callError(ER_PRINTF);
-		free(containedMessage);
-		free(time);
+		if(type == PAC_MESSAGE) { 
+			free(containedMessage);
+		}
+
 		return -1;
 	}
 
 	switch(type) { 
 		case PAC_MESSAGE: {
 			retval = printf("%s", containedMessage);
-			free(time);
 			if(retval == -1) {
 				free(containedMessage);
 				callError(ER_PRINTF);
@@ -298,8 +297,7 @@ int printMessage(int readfd) {
 		}
 	}
 
-	free(time);
-
+	fflush(stdout);
 	return 0;
 }
 
