@@ -36,11 +36,12 @@ Possible improvements:
   
 **ARCHITECTURE**  
 Description: Explain the choice behind the project  
-**Client side:**  
- 		uses two threads each with its own socket. The socket used by the read thread connects to the server whilst the socket of the  
- 		write thread is obtained through a connection from the server to client. I figured it was faster and more efficient to change the  
-		port rather than have to find to which client the socket belonged to if it connected like the first socket. It does cost more  
-	 	resource on the client side but that was a sacrifice since the thread-per-client model already was heavy  
+**Client side:** 
+Client utilizes two separate threads each with its own socket
+* Read Thread: Connects to the listening socket of the server
+* Write Thread: Gained by accepting a listening socket that the server connected to
+* Why: I figured it was faster and more efficient to change the port rather than having the server figure out which client the socket that just connected belonged to
+* Accepted tradeoffs: It definitely costs more resources on the client side but that was a sacrifice I was willing to make since the thread-per-client model was already heavy on the server
 	
 **Server side:**  
  * Client list:  
