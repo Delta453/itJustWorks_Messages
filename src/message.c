@@ -1,4 +1,3 @@
-// Writing the time in the packet is implemented in a wrong way
 #include"encryption.h"
 #include"message.h" 
 #include"error.h" 

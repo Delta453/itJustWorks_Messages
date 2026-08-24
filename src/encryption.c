@@ -1,7 +1,5 @@
 /* Encryption: random buffer, MagicNum, sizeOfMes, message, random buffer
- * Warning: This is a very basic encryption and should not be used for any reason other than testing
- *
- * Author: Konstantinos Galliopoulos*/
+ * Warning: This is a very basic encryption and should not be used for any reason other than testing*/
 
 #include<stdio.h>
 #include<stdlib.h>
