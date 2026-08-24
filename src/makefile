@@ -1,4 +1,5 @@
-BASIC_FLAGS = -Wall -g 
+BASIC_FLAGS = -O2
+//used for sanitizers
 EXTRA_FLAGS = 
 
 #object files used for both the executables
@@ -21,7 +22,7 @@ server: $(OBJECTFILES) server.o
 client.o: message.h encryption.h error.h client.c 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) client.c -c
 
-server.o: server.c encryption.h error.h message.h error.h 
+server.o: server.c encryption.h error.h message.h 
 	gcc $(BASIC_FLAGS) $(EXTRA_FLAGS) server.c -c
 
 message.o: message.c message.h error.h encryption.h

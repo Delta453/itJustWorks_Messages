@@ -69,7 +69,7 @@ void callError(call_error_t error) {
 			break;
 		}
 		case ER_PJOIN: { 
-			perror("pthread_join faild");
+			perror("pthread_join failed");
 			break;
 		}
 		case ER_PATTRINIT: { 

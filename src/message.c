@@ -205,7 +205,7 @@ char *pipeMessage(char* packet, int *packetSize, int messageSize, int fd) {
 	return message;
 }
 
-// Uses the read function and insures that it doenst read less than size
+// Uses the read function and ensures that it doesnt read less than size
 // Returns: -1 incase of failure, 0 incase of success
 int rread(int fd, void *dst, int size) { 
 	int retval = 0;

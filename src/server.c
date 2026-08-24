@@ -1,19 +1,21 @@
-/* Description: the program is meant to be run on the server for a server messanger. It will recieve messages
- * from clients and then transmit them to all other clients currently connected. 
+/* Description: This is the server source code. It handles logging connections as well as transferring 
+ * messages from one user to the everyone currently connected 
  *
  * Threads: 
- * client-thread: a thread that handles reading from the clients socket and sending it to the toSentBuffer as 
- * well as giving notifications to STDOUT about user signing in and out
+ * client-thread: a thread that handles reading from the clients socket and sending it to the toSentBuffer 
+ * 	as well as giving notifications to STDOUT about user signing in and out. Also is responsible for closing 
+ * 	the sockets of each client
  * flush-thread: a thread that takes the contents of the toSentBuffer and then sents them to every user connected
+ * 		except the sender
  * user-thread: a thread that reads STDIN and waits for the user to type 'q' and when he does it orders the 
  * 		program to close
- * accept-thread: a thread that accepts new requests made to the listening socket and creates the client-threads
- * for them
+ * accept-thread: a thread that accepts new clients, adds a new node to the list and creates the 
+ * 		client-thread for the client
  *
- * Execution: First creates a socket in listening mode, then creates the user-thread and then becomes a 
+ * Execution flow: First creates a socket in listening mode, then creates the user-thread and then becomes a 
  * accept-thread
  *
- * Returns: -1 incase of a sys call failure*/
+ * Returns: -1 in case of sys/call fail, 0 on succcess*/
 
 #define _GNU_SOURCE //required for accept4 function
 
@@ -33,7 +35,7 @@
 #include"error.h"
 
 int shutdownOrdered = 0; //used to tell when the user requested that the server is closed
-struct flaggedPipe toSendBuffer; //here clien-threads send messages that are to be broadcasted
+struct flaggedPipe toSendBuffer; //here client-threads send messages that are to be broadcasted
 struct flaggedList clientList;
 
 int getListenSocket() { 
@@ -81,7 +83,7 @@ int getListenSocket() {
 	return fdToSocket;
 }	
 
-int setInputThread() { 
+int setUserThread() { 
 	pthread_t thread;
 	pthread_attr_t attributes;
 
@@ -417,7 +419,7 @@ int publishMessage(int skipFd, char *message, int messageSize) {
 	return 0;
 }
 
-// Constantly checks the toSentBuffer and then sents out the message contained 
+// Constantly checks the toSendBuffer and then sends out the message contained 
 // in it to all the clients except for the one that sent it
 void flush_threadFunction() { 
 	char *buffer;
@@ -487,7 +489,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	if(setInputThread()) { 
+	if(setUserThread()) { 
 		return -1;
 	}
 

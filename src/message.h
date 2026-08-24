@@ -1,4 +1,4 @@
-/* A library for creating messages and the packets for them
+/* The library for the message packets and the pipe packets
  *
  * Structure: username, time, package type, message
  * time: year, month, day, hour, minutes, seconds
@@ -23,7 +23,7 @@ typedef enum {
  * message: if the type is PAC_MESSAGE the message must be null terminated and must not contain '\0'
  * , else can be set to NULL
  * meSize: if the type is PAC_MESSAGE the size of the message, else can be left 0
- * sizeOfMessasge: where the size of the encrypted message is going to be saved
+ * sizeOfMessage: where the size of the encrypted message is going to be saved
  *
  * Returns: A ptr to a non NULL ended message, NULL in case of failure*/
 extern char *createMessage(char *user, packetType_t type, char *containedMessage, int *sizeOfMessage);
@@ -88,7 +88,7 @@ extern char *pipeMessage(char *packet, int *packetSize, int messageSize, int fd)
  * 	Returns: the packet contained, NULL incase of failure should be freed after use*/
 extern char *upipeMessage(int readFd, int *srcFd, int *packetSize);
 
-// Uses the read function and insures that it doesnt read less than size
+// Uses the read function and ensures that it doesnt read less than size
 // Returns: -1 icnase of failure, 0 incase of sucess
 extern int rread(int fd, void *dst, int size);
 

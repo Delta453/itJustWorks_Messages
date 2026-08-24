@@ -1,6 +1,6 @@
-/* Description: The client side program for a client-server global chat. Inside it run two threads.
+/* Description: The client side source code
  * 	-write_thread: runs in main, reads from the socket connected to the server and displays it to stdout
- * 	is responsible for closing the sockets as well as freeing any memory.
+ * 		is responsible for closing the sockets as well as freeing any memory.
  * 	-read_thread: the thread that sends messages to the server read from stdin
  *
  * Returns: -1 in case of sys/call failure, 0 incase success
@@ -29,7 +29,7 @@
 static int shutdownOrdered = 0; //used to signal the other thread to close, set to 1 to order the other to close
 
 /* Reads from stdin and packets the message using the message.h library and it writes it to 
- * the fd given. Returns 0 when user types q
+ * the fd given. Returns 0 when user types "!Quit"
  *
  * Parameters:
  * 	writefd: the fd where the message is written
@@ -78,22 +78,14 @@ int writeToSocket(int *ptrWritefd) {
 
 	free(messageToSend);
 
-	//manual for how to sent messages
-	retval = printf("### System: To sent messages type it out and press Ctrl + D at the end of it");
+	//manual for how to send messages
+	retval = printf("### System: To send messages type it out and press Ctrl + D at the end of it or 'ENTER'\n");
 	if(retval < 0) { 
 		shutdownOrdered = 1;
 		callError(ER_PRINTF);
 		return -1;
 	}
-
 	
-	retval = printf("\n(\\n if you want your message to change line)\n");
-	if(retval < 0) { 
-		shutdownOrdered = 1;
-		callError(ER_PRINTF);
-		return -1;
-	}
-
 	retval = printf("### System: Write !Quit when you want to quit\n");
 	if(retval < 0) { 
 		shutdownOrdered = 1;
@@ -101,7 +93,7 @@ int writeToSocket(int *ptrWritefd) {
 		return -1;
 	}
 
-	retval = printf("### System: Messages come in the format of:\n");
+	retval = printf("### System: Messages come in the format of: ");
 	if(retval < 0) { 
 		shutdownOrdered = 1;
 		callError(ER_PRINTF);
@@ -203,12 +195,6 @@ int printMessage(int readfd) {
 		return -1;
 	}
 
-	if(messageSize < 0) { 
-		wwrite(STDERR_FILENO, "### System: message size negative warning\n", 
-				strlen("### System: message size negative warning\n"));
-		return 0;
-	}
-
 	message = malloc(messageSize);
 	if(message == NULL) { 
 	 callError(ER_MALLOC);
@@ -264,7 +250,7 @@ int printMessage(int readfd) {
 			}
 
 			//adds a \n at the end of the message if one wasnt written in
-			if(containedMessage[containedMessageSize -1] == '\n') { 
+			if(containedMessage[containedMessageSize -1] != '\n') { 
 				retval = wwrite(STDOUT_FILENO, "\n", 1);
 				if(retval < 0) { 
 					callError(ER_WRITE);

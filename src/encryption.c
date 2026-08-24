@@ -1,4 +1,4 @@
-/* Encryption: random buffer, MagicNum, sizeOfMes, message, random buffer
+/* Encryption format: random buffer, MagicNum, sizeOfMes, message, random buffer
  * Warning: This is a very basic encryption and should not be used for any reason other than testing*/
 
 #include<stdio.h>

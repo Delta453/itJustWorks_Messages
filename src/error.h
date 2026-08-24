@@ -27,7 +27,6 @@ typedef enum{
 } call_error_t;
 
 /* calls perror and gives it the valid str for the error
- * 
- * Parameters: The enum for the error occured*/
+ * Parameters: the enum for the error*/
 extern void callError(call_error_t error);
 #endif

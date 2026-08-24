@@ -5,14 +5,12 @@
 
 #define BACKLOGMAX 500 //sets the maximum request count on the listening thread
 //in microseconds, sets the time that threads sleep incase they are waiting
-//accept-thread: the time it waits in case the backlog is empty
-//flush-thread: the time it waits incase the out buffer is empty or the client list is empty
 #define WAITTIME 100000
 #define LISTENPORTNUM "50001" //the port number that the listen socket is gonna be connected to  default: "50001"
 #define CLIENTPORTNUM "50002" //the port number that the client listen socket is binded to default: "50002"
 
 //Constants used for CLI of the server
-#define CLI_BOOTUP "Server is being setted up, to close the program type 'q'"
+#define CLI_BOOTUP "Server is being set up, to close the program type 'q'"
 #define CLI_SETUPDONE "Server can now recieve requests from users"
 #define CLI_SHUTDOWN "Server has shut down"
 
@@ -40,34 +38,39 @@ struct flaggedList {
 /* Returns the fd to a  socket that is in listening mode, -1 incase of failure*/
 extern int getListenSocket();
 
-/* Sets up a thread that scans STDIN and when the user types 'q' then it changes the
- * shutdownOrdered var to 1
+/* Creates the user-thread
  *
  * Returns: -1 incase of failure to set up the thread*/
-extern int setInputThread();
+extern int setUserThread();
 
-/* Reads STDIN until it read 'q', when it does it chagnes the var shutDownOrdered to 1 and returns*/
+/* Reads STDIN until it read 'q', when it does it changes the var shutDownOrdered to 1 and returns*/
 extern void readForQuit();
 
 /* Checks if the listening socket has a socket waiting and if it does it creates the cleint-thread for it
  * Returns: 1 incase the backlog is empty, 0 in other cases*/
 extern int acceptClients(int socketToCheck);
 
-/*This is the function for the flush-thread. Its takes input from the toSend pipe, stores it in 
- * a heap buffer and then sends it out to all user's except the one that sent it.*/
-extern void sendToClients();
-
-/* Frees the list of clients. The ptr given, after the function points to invalid memory*/
-extern void freeList(node_t *head);
-
-/* Description: The function for the client_thread
- * Parameters: a ptr to the client node that the thread is responsible for*/
+/* The function for the clienthread
+ * Parameters: The node to the client that the thread is responsible for
+ * Returns: -1 on failure, 0 on success*/
 extern void client_threadFunction(node_t *clientNode);
 
-/*Description: The function for the flush_thread
- * Parameter: a ptr to the head of the list of client*/
+/* Sets up the flush thread
+ * Returns: -1 on failure, 0 on sucess*/
+extern int setFlushThread();
+
+/* Description: sends the message to all the user except the sender
+ * Parameters: 
+ * 	skipfd: the sender fd 
+ * 	message: the message to send
+ * 	messageSize: size of the message
+ *
+ * Returns: -1 on failure, 0 on success*/
+extern int publishMessage(int skipFd, char *message, int messageSize);
+
+/*Description: The function for the flush_thread*/
 extern void flush_threadFunction();
 
-//to add: 
-//all the thread fucntions, 
+//Frees the clientList
+void freeList(node_t *head);
 #endif
