@@ -36,12 +36,13 @@ Possible improvements:
   
 **ARCHITECTURE**  
 Description: Explain the choice behind the project  
-Client side:  
- 	uses two threads each with its own socket. The socket used by the read thread connects to the server whilst the socket of the  
- 	write thread is obtained through a connection from the server to client. I figured it was faster and more efficient to change the  
-	port rather than have to find to which client the socket belonged to if it connected like the first socket. It does cost more  
- 	resource on the client side but that was a sacrifice since the thread-per-client model already was heavy  
-Server side:  
+### Client side:  
+ 		uses two threads each with its own socket. The socket used by the read thread connects to the server whilst the socket of the  
+ 		write thread is obtained through a connection from the server to client. I figured it was faster and more efficient to change the  
+		port rather than have to find to which client the socket belonged to if it connected like the first socket. It does cost more  
+	 	resource on the client side but that was a sacrifice since the thread-per-client model already was heavy  
+	
+### Server side:  
   	Client list:  
     	A list was chosen since I wouldn't need to search it to find anything so it was the best choice. I know that because I still havent  
 		had a data base class so I am definitely qualified, dont think about it.  
