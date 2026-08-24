@@ -22,7 +22,7 @@ Server: pull the src folder and type "make server". Then run the executable prod
 Client: pull the src folder, open the "client.c" file and edit the HOSTNAME constant,  
 	it should be the DNS or the IPv4 of the OS that the server is set up in.  
 	Also unblock port 50002 (bash: sudo ufw allow 50002)  
-	-if you still have issues unblocking port 50001 sometimes helped"  
+	-if you still have issues, unblocking port 50001 sometimes it helped"  
 	**Do note:** you can only have **one client per OS** otherwise a "bind failed: port already in use" error will be  
 	displayed  
 How to set up a the DNS:  
