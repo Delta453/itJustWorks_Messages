@@ -1,9 +1,9 @@
 #ifndef ENCRYPTH
 #define ENCRYPTH
 
-#define MAGIC "end"
-#define MINBUFSIZE 1
-#define MAXBUFSIZE 2
+#define MAGIC "asdfaadfs"
+#define MINBUFSIZE 150
+#define MAXBUFSIZE 200
 
 /* Encrpyts a message.
  * Parameters: the message to decrypt, must be \0 terminated
