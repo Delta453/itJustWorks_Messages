@@ -1,0 +1,41 @@
+Author: Konstantinos galliopoulos(konstantinos.galli@gmail.com)
+
+Description: A chat app using the ivp4 protocol. When connected you can send messages that will be sent to all other
+connected clients. This program is written entirly in C resulting in high speed connections. 
+
+Features:
+	*POSIX compliance both for the server and the client
+	*mutlithreaded:
+	  -client uses: 2 threads
+		-server uses: 3 + (number of clients) threads
+	*custom data package
+	*custom encryption -it is too weak for production code-
+
+FOLDER EXPLANATION: 
+src: has the source and the make file for the final executables
+tests: test has a collection of test's both to ensure parts of the program worked while also
+	providing a testing enviroment for things such as mutlithreading and sockets. Note that they are a bit rough
+	around their edges
+	
+HOW TO USE: 
+Server: pull the src folder and type "make server". Then run the executable produced
+Client: pull the src folder, open the "client.c" file and edit the HOSTNAME constant,
+	it should be the DNS or the ip4 of the os that the server is setted up in. 
+	Also unblock port 50002 (bash: sudo ufw allow 50001)
+	-if you still have issues unblocking port 50001 sometimes helped"
+	Do note: you can only have one client per os otherwise a "bind failed: port already in use" error will be 
+	displayed
+
+How to set up a the DNS: 
+	That is entirly up to the user, for test puprose on a single client you can set the server hostname as the 
+	host name and if you run the client in the same os it will work just fine. Other wise I recommend going into
+	you router setting and setting up a custom DNS and then tell your client os's to resolve through your router for t 	given DNS
+
+Possbile improvemnts: 
+	-minimize the size of the packets
+	-GUI
+
+Personal experince: This up was developed in my first summer as an ece ugrad (2026). It had the goal of 
+furthering my understanding in socket programming as well as in multithreading. It was fun diving into the packet
+design which did make me understand how communication works. Overall I am really proud of the project and the 
+weeks poured into it. 
