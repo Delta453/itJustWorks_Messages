@@ -36,22 +36,22 @@ Possible improvements:
   
 **ARCHITECTURE**  
 Description: Explain the choice behind the project  
-### Client side:  
+**Client side:**  
  		uses two threads each with its own socket. The socket used by the read thread connects to the server whilst the socket of the  
  		write thread is obtained through a connection from the server to client. I figured it was faster and more efficient to change the  
 		port rather than have to find to which client the socket belonged to if it connected like the first socket. It does cost more  
 	 	resource on the client side but that was a sacrifice since the thread-per-client model already was heavy  
 	
-### Server side:  
-  	Client list:  
-    	A list was chosen since I wouldn't need to search it to find anything so it was the best choice. I know that because I still havent  
-		had a data base class so I am definitely qualified, dont think about it.  
-	Thread-per-client:  
- 	   	The focus of the project was on the socket programming and the multi threading so it made sense for me to avoid select and poll  
-		for the sake of simplicity.  
-	Flush thread:  
-    	I wanted to force my self to have to deal with a lot of threads trying to write into the same pipe to see race conditions. It was 
-		really fun but definitely not the best for efficiency 
+**Server side:**  
+ * Client list:  
+    A list was chosen since I wouldn't need to search it to find anything so it was the best choice. I know that because I still havent  
+	had a data base class so I am definitely qualified, dont think about it.  
+ * Thread-per-client:  
+	The focus of the project was on the socket programming and the multi threading so it made sense for me to avoid select and poll  
+	for the sake of simplicity.  
+ * Flush thread:  
+    I wanted to force my self to have to deal with a lot of threads trying to write into the same pipe to see race conditions. It was 
+	really fun but definitely not the best for efficiency 
 
 Personal experience: This app was developed in my first summer as an Electronics and Computer Engineer undergraduate (2026). It had the goal of 
 furthering my understanding in socket programming as well as in multi threading. It was fun diving into the packet
