@@ -6,7 +6,7 @@ connected clients. This program is written entirely in C resulting in high speed
 Features:  
 	*POSIX compliance both for the server and the client  
 	*multi threaded:  
-	  -client uses: 2 threads  
+		-client uses: 2 threads  
 		-server uses: 3 + (number of clients) threads  
 	*custom data package  
 	*custom encryption -it is too weak for production code-  
