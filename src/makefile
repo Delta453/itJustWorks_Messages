@@ -1,5 +1,5 @@
 BASIC_FLAGS = -O2
-//used for sanitizers
+#used for sanitizers
 EXTRA_FLAGS = 
 
 #object files used for both the executables
