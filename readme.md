@@ -1,7 +1,6 @@
 Author: Konstantinos galliopoulos(konstantinos.galli@gmail.com)  
 
-Description: A chat app using the IVp4 protocol. When connected you can send messages that will be sent to all other  
-connected clients. This program is written entirely in C resulting in high speed connections.  
+Description: A chat app using the IVp4 protocol. When connected you can send messages that will be sent to all other connected clients. This program is written entirely in C resulting in high speed connections.  
 
 Features:  
 	*POSIX compliance both for the server and the client  
