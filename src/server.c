@@ -489,6 +489,8 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
+	pthread_mutex_init(&toSendBuffer.used, NULL);
+
 	if(setUserThread()) { 
 		return -1;
 	}
